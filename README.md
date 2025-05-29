@@ -29,7 +29,7 @@ A tool to perform E2E tests on Speedrun exchange network.
 
 ## Usage
 
-Run the test script:
+### Run the E2E test
 
 ```bash
 npm start
@@ -42,7 +42,22 @@ This will:
 4. Verify the funds are received on Arbitrum
 5. Check the settlement status
 
+### Check token balances
+
+To check your USDC balances across all supported chains:
+
+```bash
+npm run balances
+```
+
+This will display:
+- Native token balances on each chain
+- USDC balances on each chain
+- Total USDC across all chains
+
 ## Example Output
+
+### E2E Test
 
 ```
 Using wallet address: 0x1234...5678
