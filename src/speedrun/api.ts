@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { SPEEDRUN_API_URL } from '../constants';
+import axios from "axios";
+import { SPEEDRUN_API_URL } from "../constants";
 
 export interface IntentResponse {
   id: string;
@@ -9,7 +9,7 @@ export interface IntentResponse {
   amount: string;
   recipient: string;
   intent_fee: string;
-  status: 'pending' | 'fulfilled' | 'settled' | 'cancelled' | 'failed';
+  status: "pending" | "fulfilled" | "settled" | "cancelled" | "failed";
   created_at: string;
   updated_at: string;
   fulfillment_tx?: string;
@@ -30,7 +30,9 @@ export class SpeedrunApiClient {
    */
   async getIntent(intentId: string): Promise<IntentResponse | null> {
     try {
-      const response = await axios.get<IntentResponse>(`${this.baseUrl}/intents/${intentId}`);
+      const response = await axios.get<IntentResponse>(
+        `${this.baseUrl}/intents/${intentId}`
+      );
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -50,32 +52,36 @@ export class SpeedrunApiClient {
    */
   async pollIntentStatus(
     intentId: string,
-    targetStatus: IntentResponse['status'] | IntentResponse['status'][],
+    targetStatus: IntentResponse["status"] | IntentResponse["status"][],
     maxAttempts: number,
     intervalMs: number
   ): Promise<IntentResponse | null> {
-    const targetStatuses = Array.isArray(targetStatus) ? targetStatus : [targetStatus];
-    
+    const targetStatuses = Array.isArray(targetStatus)
+      ? targetStatus
+      : [targetStatus];
+
     let attempts = 0;
     while (attempts < maxAttempts) {
       const intent = await this.getIntent(intentId);
-      
+
       if (!intent) {
         console.log(`Intent ${intentId} not found.`);
         return null;
       }
-      
-      console.log(`Intent ${intentId} status: ${intent.status} (attempt ${attempts + 1}/${maxAttempts})`);
-      
+
+      console.log(
+        `Intent ${intentId} status: ${intent.status} (attempt ${attempts + 1}/${maxAttempts})`
+      );
+
       if (targetStatuses.includes(intent.status)) {
         return intent;
       }
-      
+
       // Wait for the specified interval
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
       attempts++;
     }
-    
+
     // Return the latest intent data even if target status wasn't reached
     return this.getIntent(intentId);
   }
