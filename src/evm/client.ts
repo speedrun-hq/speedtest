@@ -4,6 +4,7 @@ import { ChainConfig } from "../constants";
 // Intent contract interface
 const intentAbi = [
   "function initiateTransfer(address asset, uint256 amount, uint256 targetChain, bytes calldata receiver, uint256 tip, uint256 salt) external returns (bytes32)",
+  "function getNextIntentId(uint256 salt) external view returns (bytes32)",
 ];
 
 // ERC20 token interface
@@ -97,9 +98,11 @@ export class EvmClient {
 
   /**
    * Initiates a cross-chain token transfer
-   * @returns intentId as bytes32 string
+   * @returns Object containing the intentId and transaction hash
    */
-  async initiateTransfer(params: InitiateTransferParams): Promise<string> {
+  async initiateTransfer(
+    params: InitiateTransferParams
+  ): Promise<{ intentId: string; txHash: string }> {
     // First approve the intent contract to spend tokens
     await this.approveToken(params.asset, params.amount + params.tip);
 
@@ -108,6 +111,10 @@ export class EvmClient {
       intentAbi,
       this.wallet
     );
+
+    // Get the intent ID before initiating the transfer
+    const intentId = await intentContract.getNextIntentId(params.salt);
+    console.log(`Predicted intent ID: ${intentId}`);
 
     // Encode the receiver as bytes
     const receiverBytes = ethers.getBytes(
@@ -125,19 +132,10 @@ export class EvmClient {
       params.salt
     );
 
-    console.log(`Transaction sent: ${tx.hash}`);
     // Wait for transaction to be mined
     const receipt = await tx.wait();
-    console.log(`Transaction confirmed in block ${receipt?.blockNumber}`);
 
-    // Extract the intent ID from transaction logs
-    // This assumes the intent ID is emitted as the first topic in the first log
-    if (receipt && receipt.logs.length > 0) {
-      const intentId = receipt.logs[0].topics[1];
-      return intentId;
-    } else {
-      throw new Error("Failed to extract intent ID from transaction");
-    }
+    return { intentId, txHash: tx.hash };
   }
 
   async checkFunds(address: string, tokenAddress: string): Promise<string> {

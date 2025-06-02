@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { ethers } from "ethers";
+import { Command } from "commander";
 import { EvmClient } from "../evm/client";
 import { CHAINS, CURRENT_NETWORK } from "../constants";
 
@@ -15,6 +16,15 @@ interface BalanceEntry {
 }
 
 export async function showBalances() {
+  // Setup command line parser
+  const program = new Command();
+
+  program
+    .option("-a, --address <address>", "Address to check balances for")
+    .parse(process.argv);
+
+  const options = program.opts();
+
   // Get private key from environment
   const privateKey = process.env.EVM_PRIVATE_KEY;
   if (!privateKey) {
@@ -25,7 +35,17 @@ export async function showBalances() {
   try {
     // Get wallet address from private key
     const wallet = new ethers.Wallet(privateKey);
-    console.log(`\nShowing balances for wallet: ${wallet.address}`);
+
+    // Use the provided address or default to the wallet address
+    const targetAddress = options.address || wallet.address;
+
+    console.log(`\nShowing balances for address: ${targetAddress}`);
+
+    // If using a custom address, add a note that we're in read-only mode
+    if (options.address) {
+      console.log("(Read-only mode - using your wallet to query balances)");
+    }
+
     console.log("-".repeat(50));
 
     // Get chain configs for the current network
@@ -53,7 +73,7 @@ export async function showBalances() {
         const client = new EvmClient(chainConfig, privateKey);
 
         // Get native balance
-        const nativeBalance = await client.getBalance();
+        const nativeBalance = await client.getBalance(targetAddress);
         // Format native balance to 3 decimal places max
         const formattedNativeBalance = parseFloat(nativeBalance).toFixed(3);
         balances.native.push({
@@ -64,7 +84,10 @@ export async function showBalances() {
         });
 
         // Get USDC balance
-        const usdcBalance = await client.getTokenBalance(chainConfig.usdc);
+        const usdcBalance = await client.getTokenBalance(
+          chainConfig.usdc,
+          targetAddress
+        );
         const usdcNumeric = parseFloat(usdcBalance);
         totalUsdcValue += isNaN(usdcNumeric) ? 0 : usdcNumeric;
         // Format USDC balance to 2 decimal places max
@@ -78,7 +101,10 @@ export async function showBalances() {
 
         // Get USDT balance if available for this chain
         if (chainConfig.usdt) {
-          const usdtBalance = await client.getTokenBalance(chainConfig.usdt);
+          const usdtBalance = await client.getTokenBalance(
+            chainConfig.usdt,
+            targetAddress
+          );
           const usdtNumeric = parseFloat(usdtBalance);
           totalUsdtValue += isNaN(usdtNumeric) ? 0 : usdtNumeric;
           // Format USDT balance to 2 decimal places max

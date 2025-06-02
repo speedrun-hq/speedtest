@@ -16,6 +16,15 @@ export interface IntentResponse {
   settlement_tx?: string;
 }
 
+export interface IntentStatusResult {
+  intent: IntentResponse | null;
+  fulfilledAt?: Date;
+  settledAt?: Date;
+  timeToFulfill?: number; // milliseconds
+  timeToSettle?: number; // milliseconds from fulfilled to settled
+  totalTime?: number; // milliseconds from start to settled
+}
+
 export class SpeedrunApiClient {
   private baseUrl: string;
 
@@ -48,41 +57,84 @@ export class SpeedrunApiClient {
    * @param targetStatus The status to wait for
    * @param maxAttempts Maximum number of polling attempts
    * @param intervalMs Interval between polling attempts in milliseconds
-   * @returns The intent data when the target status is reached, or the latest data if max attempts reached
+   * @returns Object containing the final intent and timing information
    */
   async pollIntentStatus(
     intentId: string,
     targetStatus: IntentResponse["status"] | IntentResponse["status"][],
     maxAttempts: number,
     intervalMs: number
-  ): Promise<IntentResponse | null> {
+  ): Promise<IntentStatusResult> {
     const targetStatuses = Array.isArray(targetStatus)
       ? targetStatus
       : [targetStatus];
 
     let attempts = 0;
+    let intent: IntentResponse | null = null;
+    let previousStatus: string | null = null;
+    const startTime = new Date();
+    let fulfilledAt: Date | undefined;
+    let settledAt: Date | undefined;
+
+    console.log(`Starting to poll for intent status...`);
+
     while (attempts < maxAttempts) {
-      const intent = await this.getIntent(intentId);
+      intent = await this.getIntent(intentId);
 
       if (!intent) {
-        console.log(`Intent ${intentId} not found.`);
-        return null;
+        console.log(
+          `Status: Not found (attempt ${attempts + 1}/${maxAttempts}). Waiting for indexing...`
+        );
+      } else {
+        // Always log the status on every attempt
+        console.log(
+          `Status: ${intent.status} (attempt ${attempts + 1}/${maxAttempts})`
+        );
+
+        // Record status changes for timing purposes
+        if (intent.status !== previousStatus) {
+          previousStatus = intent.status;
+
+          // Record timing for fulfilled status
+          if (intent.status === "fulfilled") {
+            fulfilledAt = new Date();
+          }
+
+          // Record timing for settled status
+          if (intent.status === "settled") {
+            settledAt = new Date();
+          }
+        }
+
+        // If we've reached the final target status (settled), we can stop polling
+        // But for fulfilled, we want to continue polling until settled or max attempts
+        if (
+          targetStatuses.includes(intent.status) &&
+          intent.status !== "fulfilled"
+        ) {
+          break;
+        }
       }
 
-      console.log(
-        `Intent ${intentId} status: ${intent.status} (attempt ${attempts + 1}/${maxAttempts})`
-      );
-
-      if (targetStatuses.includes(intent.status)) {
-        return intent;
-      }
-
-      // Wait for the specified interval
+      // Wait for the specified interval before trying again
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
       attempts++;
     }
 
-    // Return the latest intent data even if target status wasn't reached
-    return this.getIntent(intentId);
+    // Calculate timing metrics if available
+    const result: IntentStatusResult = { intent };
+
+    if (fulfilledAt) {
+      result.fulfilledAt = fulfilledAt;
+      result.timeToFulfill = fulfilledAt.getTime() - startTime.getTime();
+    }
+
+    if (settledAt && fulfilledAt) {
+      result.settledAt = settledAt;
+      result.timeToSettle = settledAt.getTime() - fulfilledAt.getTime();
+      result.totalTime = settledAt.getTime() - startTime.getTime();
+    }
+
+    return result;
   }
 }

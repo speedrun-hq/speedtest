@@ -63,6 +63,18 @@ To check your USDC balances across all supported chains:
 npm run balances
 ```
 
+To check balances for a different address:
+
+```bash
+npm run balances -- --address 0x1234567890abcdef1234567890abcdef12345678
+```
+
+You can also use the short form:
+
+```bash
+npm run balances -- -a 0x1234567890abcdef1234567890abcdef12345678
+```
+
 This will display:
 
 - Native token balances on each chain

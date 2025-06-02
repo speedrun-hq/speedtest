@@ -116,4 +116,4 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
 export const SPEEDRUN_API_URL = "https://api.speedrun.exchange/api/v1";
 
 export const POLL_INTERVAL_MS = 5000; // 5 seconds between API checks
-export const MAX_POLL_ATTEMPTS = 60; // 5 minutes max waiting time (60 * 5s)
+export const MAX_POLL_ATTEMPTS = 180; // 15 minutes max waiting time (180 * 5s)
