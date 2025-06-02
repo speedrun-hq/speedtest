@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { showBalances } from "./commands/balances";
 import { showBytecodes } from "./commands/bytecodes";
 import { executeTransfer } from "./commands/transfer";
+import { checkVerifiedImplementations } from "./commands/verified";
 
 // Load environment variables
 dotenv.config();
@@ -20,12 +21,17 @@ async function main() {
       case "bytecodes":
         await showBytecodes();
         break;
+      case "verified":
+        await checkVerifiedImplementations();
+        break;
       case "transfer":
         await executeTransfer();
         break;
       default:
         console.error(`Unknown command: ${command}`);
-        console.log("Available commands: balances, bytecodes, transfer");
+        console.log(
+          "Available commands: balances, bytecodes, verified, transfer"
+        );
         process.exit(1);
     }
   } catch (error) {

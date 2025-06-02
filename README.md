@@ -8,6 +8,8 @@ A tool to perform E2E tests on Speedrun exchange network.
 - Monitor intent status through the Speedrun API
 - Verify token receipt on destination chain
 - Monitor settlement status
+- Check contract bytecodes across networks
+- Verify contract implementation status
 
 ## Setup
 
@@ -16,13 +18,23 @@ A tool to perform E2E tests on Speedrun exchange network.
    ```
    npm install
    ```
-3. Create a `.env` file in the root directory with your EVM wallet private key:
+3. Create a `.env` file in the root directory with your EVM wallet private key and explorer API keys:
+
    ```
    # Your EVM wallet private key (required)
    EVM_PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+
+   # Explorer API keys (required for bytecodes and verified commands)
+   BASESCAN_API_KEY=your_basescan_api_key
+   ARBISCAN_API_KEY=your_arbiscan_api_key
+   BSCSCAN_API_KEY=your_bscscan_api_key
+   POLYGONSCAN_API_KEY=your_polygonscan_api_key
+   ETHERSCAN_API_KEY=your_etherscan_api_key
+   ZETACHAIN_API_KEY=your_zetachain_api_key
    ```
-   
+
    **Important**: Replace the example private key with your own. The wallet must have:
+
    - ETH on Base for gas
    - USDC on Base for transfers
    - ETH on Arbitrum for gas
@@ -32,10 +44,11 @@ A tool to perform E2E tests on Speedrun exchange network.
 ### Run the E2E test
 
 ```bash
-npm start
+npm run transfer
 ```
 
 This will:
+
 1. Check wallet balances on both chains
 2. Initiate a USDC transfer from Base to Arbitrum
 3. Poll the Speedrun API for intent status updates
@@ -51,34 +64,35 @@ npm run balances
 ```
 
 This will display:
+
 - Native token balances on each chain
 - USDC balances on each chain
 - Total USDC across all chains
 
-## Example Output
+### Compare contract bytecodes
 
-### E2E Test
+To compare intent contract implementation bytecodes across networks:
 
+```bash
+npm run bytecodes
 ```
-Using wallet address: 0x1234...5678
 
-Initial Balances:
-Base ETH: 0.5
-Base USDC: 100.0
-Arbitrum ETH: 0.1
-Arbitrum USDC: 0.0
+This requires explorer API keys set in your `.env` file and will:
 
-Initiating transfer from Base to Arbitrum...
-Intent created with ID: 0x9876543210987654321098765432109876543210987654321098765432109876
+- Fetch implementation addresses of the proxy contracts
+- Retrieve and compare creation bytecodes across networks
+- Group networks with matching bytecodes
 
-Polling for intent status...
-Intent 0x9876... status: pending (attempt 1/60)
-Intent 0x9876... status: pending (attempt 2/60)
-Intent 0x9876... status: fulfilled (attempt 3/60)
+### Check contract verification status
 
-Intent final status: fulfilled
-Success! The intent was processed successfully.
+To check if intent contract implementations are verified on their respective explorers:
 
-Final Arbitrum USDC balance: 10.0
-Fulfillment transaction: 0xabcd...ef01
+```bash
+npm run verified
 ```
+
+This requires explorer API keys set in your `.env` file and will:
+
+- Fetch implementation addresses of the proxy contracts
+- Check verification status on each explorer
+- Show summary of verified and unverified contracts

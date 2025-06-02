@@ -1,0 +1,11 @@
+# EVM private key for transaction signing
+EVM_PRIVATE_KEY=your_private_key_here
+
+# Explorer API keys
+BASESCAN_API_KEY=your_basescan_api_key_here
+ARBISCAN_API_KEY=your_arbiscan_api_key_here
+BSCSCAN_API_KEY=your_bscscan_api_key_here
+POLYGONSCAN_API_KEY=your_polygonscan_api_key_here
+ETHERSCAN_API_KEY=your_etherscan_api_key_here
+ROUTESCAN_API_KEY=your_routescan_api_key_here
+ZETACHAIN_API_KEY=your_zetachain_api_key_here 
