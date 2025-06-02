@@ -6,6 +6,14 @@ import { CHAINS, CURRENT_NETWORK } from "../constants";
 // Load environment variables
 dotenv.config();
 
+// Define a type for balance entries
+interface BalanceEntry {
+  chain: string;
+  name: string;
+  emoji: string;
+  balance: string;
+}
+
 async function showBalances() {
   // Get private key from environment
   const privateKey = process.env.EVM_PRIVATE_KEY;
@@ -23,47 +31,106 @@ async function showBalances() {
     // Get chain configs for the current network
     const chainConfigs = CHAINS[CURRENT_NETWORK];
 
-    // Track total stablecoin values across all chains
+    // Store balances by token type
+    const balances: {
+      native: BalanceEntry[];
+      usdc: BalanceEntry[];
+      usdt: BalanceEntry[];
+    } = {
+      native: [],
+      usdc: [],
+      usdt: [],
+    };
+
+    // Total values
     let totalUsdcValue = 0;
     let totalUsdtValue = 0;
 
-    // Check balances on each chain
+    // Fetch all balances
     for (const [chainName, chainConfig] of Object.entries(chainConfigs)) {
       try {
         // Create client for this chain
         const client = new EvmClient(chainConfig, privateKey);
 
-        // Get native and USDC balances
+        // Get native balance
         const nativeBalance = await client.getBalance();
+        // Format native balance to 3 decimal places max
+        const formattedNativeBalance = parseFloat(nativeBalance).toFixed(3);
+        balances.native.push({
+          chain: chainName,
+          name: chainConfig.name,
+          emoji: chainConfig.emoji,
+          balance: formattedNativeBalance,
+        });
+
+        // Get USDC balance
         const usdcBalance = await client.getTokenBalance(chainConfig.usdc);
-
-        // Get USDT balance if available for this chain
-        let usdtBalance = "N/A";
-        if (chainConfig.usdt) {
-          usdtBalance = await client.getTokenBalance(chainConfig.usdt);
-          // Parse USDT balance to number for total calculation
-          const usdtNumeric = parseFloat(usdtBalance);
-          totalUsdtValue += isNaN(usdtNumeric) ? 0 : usdtNumeric;
-        }
-
-        // Parse USDC balance to number for total calculation
         const usdcNumeric = parseFloat(usdcBalance);
         totalUsdcValue += isNaN(usdcNumeric) ? 0 : usdcNumeric;
+        // Format USDC balance to 2 decimal places max
+        const formattedUsdcBalance = usdcNumeric.toFixed(2);
+        balances.usdc.push({
+          chain: chainName,
+          name: chainConfig.name,
+          emoji: chainConfig.emoji,
+          balance: formattedUsdcBalance,
+        });
 
-        console.log(`\n${chainConfig.name} (${chainName}):`);
-        console.log(
-          `  Native token: ${nativeBalance} ${chainName === "base" || chainName === "arbitrum" ? "ETH" : "Native"}`
-        );
-        console.log(`  USDC: ${usdcBalance}`);
-        console.log(`  USDT: ${usdtBalance}`);
+        // Get USDT balance if available for this chain
+        if (chainConfig.usdt) {
+          const usdtBalance = await client.getTokenBalance(chainConfig.usdt);
+          const usdtNumeric = parseFloat(usdtBalance);
+          totalUsdtValue += isNaN(usdtNumeric) ? 0 : usdtNumeric;
+          // Format USDT balance to 2 decimal places max
+          const formattedUsdtBalance = usdtNumeric.toFixed(2);
+          balances.usdt.push({
+            chain: chainName,
+            name: chainConfig.name,
+            emoji: chainConfig.emoji,
+            balance: formattedUsdtBalance,
+          });
+        }
       } catch (error) {
         console.error(`Error fetching balances for ${chainName}:`, error);
       }
     }
 
-    console.log("\n" + "-".repeat(50));
-    console.log(`Total USDC across all chains: ${totalUsdcValue.toFixed(6)}`);
-    console.log(`Total USDT across all chains: ${totalUsdtValue.toFixed(6)}`);
+    // Find the longest network name for alignment
+    const longestNameLength = Math.max(
+      ...Object.values(chainConfigs).map(
+        (config) => (config.emoji + " " + config.name).length
+      )
+    );
+
+    // Display USDC balances
+    console.log("\nUSDC:");
+    console.log("-".repeat(50));
+    for (const item of balances.usdc) {
+      const label = `${item.emoji} ${item.name}`;
+      console.log(`  ${label.padEnd(longestNameLength)}: ${item.balance}`);
+    }
+    console.log(
+      `  ${"Total".padEnd(longestNameLength)}: ${totalUsdcValue.toFixed(2)}`
+    );
+
+    // Display USDT balances
+    console.log("\nUSDT:");
+    console.log("-".repeat(50));
+    for (const item of balances.usdt) {
+      const label = `${item.emoji} ${item.name}`;
+      console.log(`  ${label.padEnd(longestNameLength)}: ${item.balance}`);
+    }
+    console.log(
+      `  ${"Total".padEnd(longestNameLength)}: ${totalUsdtValue.toFixed(2)}`
+    );
+
+    // Display native token balances last
+    console.log("\nNative Tokens:");
+    console.log("-".repeat(50));
+    for (const item of balances.native) {
+      const label = `${item.emoji} ${item.name}`;
+      console.log(`  ${label.padEnd(longestNameLength)}: ${item.balance}`);
+    }
   } catch (error) {
     console.error("Error showing balances:", error);
     process.exit(1);
