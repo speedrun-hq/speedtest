@@ -12,6 +12,7 @@ export interface ChainConfig {
   rpc: string;
   intent: string;
   usdc: string;
+  usdt?: string; // Optional as not all chains may have USDT
 }
 
 export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
@@ -29,6 +30,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       rpc: "https://arb1.arbitrum.io/rpc",
       intent: "0xD6B0E2a8D115cCA2823c5F80F8416644F3970dD2",
       usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      usdt: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", // USDT on Arbitrum
     },
   },
   [Network.TESTNET]: {
@@ -39,6 +41,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       rpc: "https://sepolia.base.org",
       intent: "0x0000000000000000000000000000000000000000", // placeholder
       usdc: "0x0000000000000000000000000000000000000000", // placeholder
+      usdt: "0x0000000000000000000000000000000000000000", // placeholder
     },
     arbitrum: {
       name: "Arbitrum Testnet",
@@ -46,6 +49,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       rpc: "https://sepolia-rollup.arbitrum.io/rpc",
       intent: "0x0000000000000000000000000000000000000000", // placeholder
       usdc: "0x0000000000000000000000000000000000000000", // placeholder
+      usdt: "0x0000000000000000000000000000000000000000", // placeholder
     },
   },
 };

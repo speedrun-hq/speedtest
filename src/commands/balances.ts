@@ -23,8 +23,9 @@ async function showBalances() {
     // Get chain configs for the current network
     const chainConfigs = CHAINS[CURRENT_NETWORK];
 
-    // Track total USDC value across all chains
+    // Track total stablecoin values across all chains
     let totalUsdcValue = 0;
+    let totalUsdtValue = 0;
 
     // Check balances on each chain
     for (const [chainName, chainConfig] of Object.entries(chainConfigs)) {
@@ -36,6 +37,15 @@ async function showBalances() {
         const nativeBalance = await client.getBalance();
         const usdcBalance = await client.getTokenBalance(chainConfig.usdc);
 
+        // Get USDT balance if available for this chain
+        let usdtBalance = "N/A";
+        if (chainConfig.usdt) {
+          usdtBalance = await client.getTokenBalance(chainConfig.usdt);
+          // Parse USDT balance to number for total calculation
+          const usdtNumeric = parseFloat(usdtBalance);
+          totalUsdtValue += isNaN(usdtNumeric) ? 0 : usdtNumeric;
+        }
+
         // Parse USDC balance to number for total calculation
         const usdcNumeric = parseFloat(usdcBalance);
         totalUsdcValue += isNaN(usdcNumeric) ? 0 : usdcNumeric;
@@ -45,6 +55,7 @@ async function showBalances() {
           `  Native token: ${nativeBalance} ${chainName === "base" || chainName === "arbitrum" ? "ETH" : "Native"}`
         );
         console.log(`  USDC: ${usdcBalance}`);
+        console.log(`  USDT: ${usdtBalance}`);
       } catch (error) {
         console.error(`Error fetching balances for ${chainName}:`, error);
       }
@@ -52,6 +63,7 @@ async function showBalances() {
 
     console.log("\n" + "-".repeat(50));
     console.log(`Total USDC across all chains: ${totalUsdcValue.toFixed(6)}`);
+    console.log(`Total USDT across all chains: ${totalUsdtValue.toFixed(6)}`);
   } catch (error) {
     console.error("Error showing balances:", error);
     process.exit(1);
