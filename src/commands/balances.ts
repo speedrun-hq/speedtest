@@ -14,7 +14,7 @@ interface BalanceEntry {
   balance: string;
 }
 
-async function showBalances() {
+export async function showBalances() {
   // Get private key from environment
   const privateKey = process.env.EVM_PRIVATE_KEY;
   if (!privateKey) {
@@ -137,8 +137,10 @@ async function showBalances() {
   }
 }
 
-// Run the command
-showBalances().catch((error) => {
-  console.error("Unhandled error:", error);
-  process.exit(1);
-});
+// Only run if this file is executed directly
+if (require.main === module) {
+  showBalances().catch((error) => {
+    console.error("Unhandled error:", error);
+    process.exit(1);
+  });
+}

@@ -14,6 +14,7 @@ export interface ChainConfig {
   usdc: string;
   usdt?: string; // Optional as not all chains may have USDT
   emoji: string; // Emoji for the network
+  explorer?: string; // Explorer API URL
 }
 
 export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
@@ -25,6 +26,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       intent: "0x999fce149FD078DCFaa2C681e060e00F528552f4",
       usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       emoji: "🔵",
+      explorer: "https://api.basescan.org",
     },
     arbitrum: {
       name: "Arbitrum",
@@ -34,6 +36,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
       usdt: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", // USDT on Arbitrum
       emoji: "🪐",
+      explorer: "https://api.arbiscan.io",
     },
     avalanche: {
       name: "Avalanche",
@@ -43,6 +46,8 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
       usdt: "0xde3a24028580884448a5397872046a019649b084",
       emoji: "🔺",
+      explorer:
+        "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan",
     },
     bsc: {
       name: "BSC",
@@ -52,6 +57,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
       usdt: "0x55d398326f99059fF775485246999027B3197955",
       emoji: "🟡",
+      explorer: "https://api.bscscan.com",
     },
     ethereum: {
       name: "Ethereum",
@@ -61,6 +67,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
       emoji: "👽",
+      explorer: "https://api.etherscan.io",
     },
     polygon: {
       name: "Polygon",
@@ -70,6 +77,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
       usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
       emoji: "🟣",
+      explorer: "https://api.polygonscan.com",
     },
     zetachain: {
       name: "ZetaChain",
@@ -79,6 +87,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0x0cbe0dF132a6c6B4a2974Fa1b7Fb953CF0Cc798a",
       usdt: "0x7c8dDa80bbBE1254a7aACf3219EBe1481c6E01d7",
       emoji: "🟩",
+      explorer: "https://zetachain.blockscout.com/api",
     },
   },
   [Network.TESTNET]: {
