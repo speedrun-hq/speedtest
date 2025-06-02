@@ -41,18 +41,34 @@ A tool to perform E2E tests on Speedrun exchange network.
 
 ## Usage
 
-### Run the E2E test
+### Run a Cross-Chain Transfer
 
 ```bash
 npm run transfer
 ```
 
-This will:
+By default, this will transfer 0.3 USDC from Base to Arbitrum with a 0.2 USDC fee.
+
+You can customize the transfer with the following options:
+
+```bash
+npm run transfer -- --src base --dst arbitrum --asset usdc --amount 0.3 --fee 0.2
+```
+
+Options:
+
+- `--src`, `-s`: Source chain (default: "base")
+- `--dst`, `-d`: Destination chain (default: "arbitrum")
+- `--asset`, `-a`: Token to transfer (default: "usdc")
+- `--amount`, `-m`: Amount to transfer (default: "0.3")
+- `--fee`, `-f`: Fee/tip amount (default: "0.2")
+
+The command will:
 
 1. Check wallet balances on both chains
-2. Initiate a USDC transfer from Base to Arbitrum
+2. Initiate the token transfer from source to destination chain
 3. Poll the Speedrun API for intent status updates
-4. Verify the funds are received on Arbitrum
+4. Verify the funds are received on the destination chain
 5. Check the settlement status
 
 ### Check token balances

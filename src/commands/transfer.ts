@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { ethers } from "ethers";
+import { Command } from "commander";
 import { EvmClient, InitiateTransferParams } from "../evm/client";
 import { SpeedrunApiClient } from "../speedrun/api";
 import {
@@ -7,6 +8,7 @@ import {
   CURRENT_NETWORK,
   POLL_INTERVAL_MS,
   MAX_POLL_ATTEMPTS,
+  ChainConfig,
 } from "../constants";
 
 // Load environment variables
@@ -23,7 +25,24 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
+// Type for supported assets
+type SupportedAsset = "usdc" | "usdt";
+
 export async function executeTransfer() {
+  // Setup command line parser
+  const program = new Command();
+
+  program
+    .option("-s, --src <chain>", "Source chain", "base")
+    .option("-d, --dst <chain>", "Destination chain", "arbitrum")
+    .option("-a, --asset <token>", "Token to transfer", "usdc")
+    .option("-m, --amount <amount>", "Amount to transfer", "0.3")
+    .option("-f, --fee <fee>", "Fee/tip amount", "0.2")
+    .parse(process.argv);
+
+  const options = program.opts();
+  const assetName = options.asset as SupportedAsset;
+
   // Get private key from environment
   const privateKey = process.env.EVM_PRIVATE_KEY;
   if (!privateKey) {
@@ -33,11 +52,39 @@ export async function executeTransfer() {
 
   try {
     // Initialize clients
-    const baseConfig = CHAINS[CURRENT_NETWORK].base;
-    const arbitrumConfig = CHAINS[CURRENT_NETWORK].arbitrum;
+    const chains = CHAINS[CURRENT_NETWORK];
 
-    const baseClient = new EvmClient(baseConfig, privateKey);
-    const arbitrumClient = new EvmClient(arbitrumConfig, privateKey);
+    // Validate chain options
+    if (!chains[options.src]) {
+      console.error(`Error: Source chain '${options.src}' not supported`);
+      console.log(`Supported chains: ${Object.keys(chains).join(", ")}`);
+      process.exit(1);
+    }
+    if (!chains[options.dst]) {
+      console.error(`Error: Destination chain '${options.dst}' not supported`);
+      console.log(`Supported chains: ${Object.keys(chains).join(", ")}`);
+      process.exit(1);
+    }
+
+    const sourceConfig = chains[options.src];
+    const destConfig = chains[options.dst];
+
+    // Validate asset is available on both chains
+    if (!sourceConfig[assetName]) {
+      console.error(
+        `Error: Asset '${assetName}' not available on ${sourceConfig.name}`
+      );
+      process.exit(1);
+    }
+    if (!destConfig[assetName]) {
+      console.error(
+        `Error: Asset '${assetName}' not available on ${destConfig.name}`
+      );
+      process.exit(1);
+    }
+
+    const sourceClient = new EvmClient(sourceConfig, privateKey);
+    const destClient = new EvmClient(destConfig, privateKey);
     const speedrunApi = new SpeedrunApiClient();
 
     // Initialize wallet address from private key
@@ -45,27 +92,34 @@ export async function executeTransfer() {
     console.log(`Using wallet address: ${wallet.address}`);
 
     // Check wallet balances
-    const baseNativeBalance = await baseClient.getBalance();
-    const baseUsdcBalance = await baseClient.getTokenBalance(baseConfig.usdc);
-    const arbitrumNativeBalance = await arbitrumClient.getBalance();
-    const arbitrumUsdcBalance = await arbitrumClient.getTokenBalance(
-      arbitrumConfig.usdc
+    const sourceNativeBalance = await sourceClient.getBalance();
+    const sourceTokenBalance = await sourceClient.getTokenBalance(
+      sourceConfig[assetName]
+    );
+    const destNativeBalance = await destClient.getBalance();
+    const destTokenBalance = await destClient.getTokenBalance(
+      destConfig[assetName]
     );
 
-    // Initiate transfer from Base to Arbitrum
-    console.log("\nInitiating transfer from Base to Arbitrum...");
+    // Initiate transfer from source to destination
+    console.log(
+      `\nInitiating transfer from ${sourceConfig.name} to ${destConfig.name}...`
+    );
+
+    // Parse amounts with the correct number of decimals (6 for USDC)
+    const tokenDecimals = assetName === "usdc" ? 6 : 18; // Default to 18 for other tokens
 
     const transferParams: InitiateTransferParams = {
-      asset: baseConfig.usdc, // USDC on Base
-      amount: ethers.parseUnits("0.3", 6), // 0.3 USDC (6 decimals)
-      targetChain: arbitrumConfig.chainId, // Arbitrum chain ID
+      asset: sourceConfig[assetName], // Token address on source chain
+      amount: ethers.parseUnits(options.amount, tokenDecimals), // Transfer amount
+      targetChain: destConfig.chainId, // Destination chain ID
       receiver: wallet.address, // Send to same wallet address
-      tip: ethers.parseUnits("0.2", 6), // 0.2 USDC tip
+      tip: ethers.parseUnits(options.fee, tokenDecimals), // Fee/tip amount
       salt: Math.floor(Math.random() * 1000), // Random salt
     };
 
     const { intentId, txHash } =
-      await baseClient.initiateTransfer(transferParams);
+      await sourceClient.initiateTransfer(transferParams);
     console.log(`Intent created with ID: ${intentId}`);
     console.log(`Intent initiated with transaction: ${txHash}`);
 
@@ -99,10 +153,12 @@ export async function executeTransfer() {
       }
 
       // Check final balances
-      const finalArbitrumUsdcBalance = await arbitrumClient.getTokenBalance(
-        arbitrumConfig.usdc
+      const finalDestTokenBalance = await destClient.getTokenBalance(
+        destConfig[assetName]
       );
-      console.log(`\nFinal Arbitrum USDC balance: ${finalArbitrumUsdcBalance}`);
+      console.log(
+        `\nFinal ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
+      );
 
       if (finalIntent.fulfillment_tx) {
         console.log(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
@@ -129,10 +185,12 @@ export async function executeTransfer() {
       }
 
       // Check final balances
-      const finalArbitrumUsdcBalance = await arbitrumClient.getTokenBalance(
-        arbitrumConfig.usdc
+      const finalDestTokenBalance = await destClient.getTokenBalance(
+        destConfig[assetName]
       );
-      console.log(`\nFinal Arbitrum USDC balance: ${finalArbitrumUsdcBalance}`);
+      console.log(
+        `\nFinal ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
+      );
 
       if (finalIntent.fulfillment_tx) {
         console.log(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
