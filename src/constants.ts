@@ -117,3 +117,18 @@ export const SPEEDRUN_API_URL = "https://api.speedrun.exchange/api/v1";
 
 export const POLL_INTERVAL_MS = 5000; // 5 seconds between API checks
 export const MAX_POLL_ATTEMPTS = 180; // 15 minutes max waiting time (180 * 5s)
+
+// Initiator contracts for cross-chain calls
+export interface InitiatorMapping {
+  sourceChain: string;
+  destChain: string;
+  address: string;
+}
+
+export const INITIATOR_CONTRACTS: InitiatorMapping[] = [
+  {
+    sourceChain: "arbitrum",
+    destChain: "base",
+    address: "0xbAFeFC473e886557A7Bc8a283EdF4Cf47a3E17f9",
+  },
+];

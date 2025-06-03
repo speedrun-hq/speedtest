@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import { Command } from "commander";
 import { EvmClient } from "../evm/client";

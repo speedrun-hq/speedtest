@@ -1,10 +1,11 @@
 # Speedtest
 
-A tool to perform E2E tests on Speedrun exchange network.
+A tool to perform E2E tests on Speedrun exchange network, including cross-chain transfers and calls.
 
 ## Features
 
 - Initiate cross-chain token transfers on EVM chains
+- Execute cross-chain calls through initiator contracts
 - Monitor intent status through the Speedrun API
 - Verify token receipt on destination chain
 - Monitor settlement status
@@ -33,12 +34,6 @@ A tool to perform E2E tests on Speedrun exchange network.
    ZETACHAIN_API_KEY=your_zetachain_api_key
    ```
 
-   **Important**: Replace the example private key with your own. The wallet must have:
-
-   - ETH on Base for gas
-   - USDC on Base for transfers
-   - ETH on Arbitrum for gas
-
 ## Usage
 
 ### Run a Cross-Chain Transfer
@@ -63,13 +58,29 @@ Options:
 - `--amount`, `-m`: Amount to transfer (default: "0.3")
 - `--fee`, `-f`: Fee/tip amount (default: "0.2")
 
-The command will:
+### Run a Cross-Chain Call
 
-1. Check wallet balances on both chains
-2. Initiate the token transfer from source to destination chain
-3. Poll the Speedrun API for intent status updates
-4. Verify the funds are received on the destination chain
-5. Check the settlement status
+```bash
+npm run call
+```
+
+By default, this will initiate a cross-chain call from Arbitrum to Base through an initiator contract, swapping 0.5 USDC with a 0.2 USDC fee.
+
+The initiator contract acts as a mediator that executes specialized operations on the destination chain. Unlike direct transfers, cross-chain calls allow for more complex interactions like swaps or other DeFi operations. In this implementation, the call initiates an Aerodrome swap on the destination chain.
+
+You can customize the call with the following options:
+
+```bash
+npm run call -- --src arbitrum --dst base --amount 0.5 --fee 0.2 --gas 600000
+```
+
+Options:
+
+- `--src`, `-s`: Source chain (default: "arbitrum")
+- `--dst`, `-d`: Destination chain (default: "base")
+- `--amount`, `-a`: Amount to swap (default: "0.5")
+- `--fee`, `-f`: Fee/tip amount (default: "0.2")
+- `--gas`, `-g`: Gas limit (default: "600000")
 
 ### Check token balances
 
@@ -85,18 +96,6 @@ To check balances for a different address:
 npm run balances -- --address 0x1234567890abcdef1234567890abcdef12345678
 ```
 
-You can also use the short form:
-
-```bash
-npm run balances -- -a 0x1234567890abcdef1234567890abcdef12345678
-```
-
-This will display:
-
-- Native token balances on each chain
-- USDC balances on each chain
-- Total USDC across all chains
-
 ### Compare contract bytecodes
 
 To compare intent contract implementation bytecodes across networks:
@@ -105,11 +104,7 @@ To compare intent contract implementation bytecodes across networks:
 npm run bytecodes
 ```
 
-This requires explorer API keys set in your `.env` file and will:
-
-- Fetch implementation addresses of the proxy contracts
-- Retrieve and compare creation bytecodes across networks
-- Group networks with matching bytecodes
+This requires explorer API keys set in your `.env` file.
 
 ### Check contract verification status
 
@@ -119,8 +114,4 @@ To check if intent contract implementations are verified on their respective exp
 npm run verified
 ```
 
-This requires explorer API keys set in your `.env` file and will:
-
-- Fetch implementation addresses of the proxy contracts
-- Check verification status on each explorer
-- Show summary of verified and unverified contracts
+This requires explorer API keys set in your `.env`.

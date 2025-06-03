@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import { CHAINS, CURRENT_NETWORK } from "../constants";
 import { checkContractVerification } from "../explorer/verified";

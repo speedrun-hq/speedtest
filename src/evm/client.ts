@@ -1,11 +1,7 @@
 import { ethers } from "ethers";
 import { ChainConfig } from "../constants";
-
-// Intent contract interface
-const intentAbi = [
-  "function initiateTransfer(address asset, uint256 amount, uint256 targetChain, bytes calldata receiver, uint256 tip, uint256 salt) external returns (bytes32)",
-  "function getNextIntentId(uint256 salt) external view returns (bytes32)",
-];
+import { TransferService, InitiateTransferParams } from "./transfer";
+import { CallService, InitiateCallParams } from "./call";
 
 // ERC20 token interface
 const erc20Abi = [
@@ -15,24 +11,22 @@ const erc20Abi = [
   "function decimals() view returns (uint8)",
 ];
 
-export interface InitiateTransferParams {
-  asset: string;
-  amount: bigint;
-  targetChain: number;
-  receiver: string;
-  tip: bigint;
-  salt: number;
-}
+export { InitiateTransferParams } from "./transfer";
+export { InitiateCallParams } from "./call";
 
 export class EvmClient {
   private provider: ethers.JsonRpcProvider;
   private wallet: ethers.Wallet;
   private chainConfig: ChainConfig;
+  private transferService: TransferService;
+  private callService: CallService;
 
   constructor(chainConfig: ChainConfig, privateKey: string) {
     this.provider = new ethers.JsonRpcProvider(chainConfig.rpc);
     this.wallet = new ethers.Wallet(privateKey, this.provider);
     this.chainConfig = chainConfig;
+    this.transferService = new TransferService(this.wallet, chainConfig.intent);
+    this.callService = new CallService(this.wallet);
   }
 
   async getBalance(address?: string): Promise<string> {
@@ -58,14 +52,16 @@ export class EvmClient {
   }
 
   /**
-   * Approves the intent contract to spend tokens
+   * Approves a contract to spend tokens
    * @param tokenAddress The token to approve
    * @param amount The amount to approve
+   * @param spender The address of the contract to approve (defaults to intent contract)
    * @returns Transaction receipt of the approval
    */
   async approveToken(
     tokenAddress: string,
-    amount: bigint
+    amount: bigint,
+    spender?: string
   ): Promise<ethers.TransactionReceipt> {
     const tokenContract = new ethers.Contract(
       tokenAddress,
@@ -73,10 +69,13 @@ export class EvmClient {
       this.wallet
     );
 
+    // Use specified spender or default to intent contract
+    const spenderAddress = spender || this.chainConfig.intent;
+
     // Check current allowance
     const currentAllowance = await tokenContract.allowance(
       this.wallet.address,
-      this.chainConfig.intent
+      spenderAddress
     );
 
     // If allowance is already sufficient, return early
@@ -88,8 +87,8 @@ export class EvmClient {
       return {} as ethers.TransactionReceipt;
     }
 
-    console.log(`🔓 Approving intent contract to spend tokens...`);
-    const tx = await tokenContract.approve(this.chainConfig.intent, amount);
+    console.log(`🔓 Approving ${spenderAddress} to spend tokens...`);
+    const tx = await tokenContract.approve(spenderAddress, amount);
     const receipt = await tx.wait();
 
     console.log(`✅ Approval transaction confirmed: ${receipt?.hash}`);
@@ -103,38 +102,22 @@ export class EvmClient {
   async initiateTransfer(
     params: InitiateTransferParams
   ): Promise<{ intentId: string; txHash: string }> {
-    // First approve the intent contract to spend tokens
-    await this.approveToken(params.asset, params.amount + params.tip);
-
-    const intentContract = new ethers.Contract(
-      this.chainConfig.intent,
-      intentAbi,
-      this.wallet
+    return this.transferService.initiateTransfer(
+      params,
+      (tokenAddress, amount) => this.approveToken(tokenAddress, amount)
     );
+  }
 
-    // Get the intent ID before initiating the transfer
-    const intentId = await intentContract.getNextIntentId(params.salt);
-
-    // Encode the receiver as bytes
-    const receiverBytes = ethers.getBytes(
-      ethers.zeroPadValue(params.receiver, 20)
+  /**
+   * Initiates a cross-chain call via an initiator contract
+   * @returns Object containing the intentId and transaction hash
+   */
+  async initiateCall(
+    params: InitiateCallParams
+  ): Promise<{ intentId: string; txHash: string }> {
+    return this.callService.initiateCall(params, (tokenAddress, amount) =>
+      this.approveToken(tokenAddress, amount, params.initiatorAddress)
     );
-
-    console.log(`🚀 Initiating transfer transaction...`);
-    // Execute the transaction
-    const tx = await intentContract.initiateTransfer(
-      params.asset,
-      params.amount,
-      params.targetChain,
-      receiverBytes,
-      params.tip,
-      params.salt
-    );
-
-    // Wait for transaction to be mined
-    const receipt = await tx.wait();
-
-    return { intentId, txHash: tx.hash };
   }
 
   async checkFunds(address: string, tokenAddress: string): Promise<string> {

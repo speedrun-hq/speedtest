@@ -1,8 +1,8 @@
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import { EvmClient } from "../evm/client";
 import { CHAINS, CURRENT_NETWORK } from "../constants";
-import crypto from "crypto";
+import * as crypto from "crypto";
 import { fetchCreationBytecode } from "../explorer/bytecode";
 
 // Load environment variables

@@ -1,10 +1,12 @@
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { Command } from "commander";
 import { showBalances } from "./commands/balances";
 import { showBytecodes } from "./commands/bytecodes";
 import { checkVerifiedImplementations } from "./commands/verified";
 // Import the transfer function directly here but execute it through the command line
 import { executeTransfer } from "./commands/transfer";
+// Import the new call function
+import { executeCall } from "./commands/call";
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +70,23 @@ program
       await executeTransfer();
     } catch (error) {
       console.error("Error executing transfer command:", error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("call")
+  .description("Initiate a cross-chain call via initiator contract")
+  .option("-s, --src <chain>", "Source chain", "arbitrum")
+  .option("-d, --dst <chain>", "Destination chain", "base")
+  .option("-a, --amount <amount>", "Amount to swap", "0.5")
+  .option("-f, --fee <fee>", "Fee/tip amount", "0.2")
+  .option("-g, --gas <limit>", "Gas limit", "600000")
+  .action(async () => {
+    try {
+      await executeCall();
+    } catch (error) {
+      console.error("Error executing call command:", error);
       process.exit(1);
     }
   });

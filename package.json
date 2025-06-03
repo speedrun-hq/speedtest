@@ -10,6 +10,7 @@
     "bytecodes": "ts-node src/commands/bytecodes.ts",
     "verified": "ts-node src/commands/verified.ts",
     "transfer": "ts-node src/commands/transfer.ts",
+    "call": "ts-node src/commands/call.ts",
     "cli": "ts-node src/index.ts"
   },
   "repository": {
