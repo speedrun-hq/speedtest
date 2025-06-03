@@ -72,35 +72,44 @@ export class SpeedrunApiClient {
     let attempts = 0;
     let intent: IntentResponse | null = null;
     let previousStatus: string | null = null;
+    let intentFound = false;
     const startTime = new Date();
     let fulfilledAt: Date | undefined;
     let settledAt: Date | undefined;
 
-    console.log(`Starting to poll for intent status...`);
+    // Maximum attempts to wait for intent to be found in API
+    const MAX_NOT_FOUND_ATTEMPTS = 5;
+    let notFoundAttempts = 0;
 
     while (attempts < maxAttempts) {
       intent = await this.getIntent(intentId);
+      attempts++;
 
       if (!intent) {
-        console.log(
-          `Status: Not found (attempt ${attempts + 1}/${maxAttempts}). Waiting for indexing...`
-        );
+        notFoundAttempts++;
+        if (notFoundAttempts >= MAX_NOT_FOUND_ATTEMPTS) {
+          throw new Error(
+            `Intent not found in API after ${MAX_NOT_FOUND_ATTEMPTS} attempts`
+          );
+        }
       } else {
-        // Always log the status on every attempt
-        console.log(
-          `Status: ${intent.status} (attempt ${attempts + 1}/${maxAttempts})`
-        );
+        // Only log when we first find the intent or when status changes
+        if (!intentFound) {
+          console.log(`⏳ Intent found in API with status: ${intent.status}`);
+          intentFound = true;
+        }
 
-        // Record status changes for timing purposes
-        if (intent.status !== previousStatus) {
+        // Record status changes and log them
+        if (intent.status !== previousStatus && intentFound) {
           previousStatus = intent.status;
 
-          // Record timing for fulfilled status
+          // Record and log fulfilled status
           if (intent.status === "fulfilled") {
             fulfilledAt = new Date();
+            console.log(`👌 Intent fulfilled!`);
           }
 
-          // Record timing for settled status
+          // Record settled status
           if (intent.status === "settled") {
             settledAt = new Date();
           }
@@ -118,7 +127,6 @@ export class SpeedrunApiClient {
 
       // Wait for the specified interval before trying again
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
-      attempts++;
     }
 
     // Calculate timing metrics if available

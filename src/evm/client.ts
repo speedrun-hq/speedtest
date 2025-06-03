@@ -82,17 +82,17 @@ export class EvmClient {
     // If allowance is already sufficient, return early
     if (currentAllowance >= amount) {
       console.log(
-        `Approval already exists for ${ethers.formatUnits(currentAllowance)} tokens`
+        `✅ Approval already exists for ${ethers.formatUnits(currentAllowance)} tokens`
       );
       // Return a dummy receipt since we don't need to make a transaction
       return {} as ethers.TransactionReceipt;
     }
 
-    console.log(`Approving intent contract to spend tokens...`);
+    console.log(`🔓 Approving intent contract to spend tokens...`);
     const tx = await tokenContract.approve(this.chainConfig.intent, amount);
     const receipt = await tx.wait();
 
-    console.log(`Approval transaction confirmed: ${receipt?.hash}`);
+    console.log(`✅ Approval transaction confirmed: ${receipt?.hash}`);
     return receipt;
   }
 
@@ -114,14 +114,13 @@ export class EvmClient {
 
     // Get the intent ID before initiating the transfer
     const intentId = await intentContract.getNextIntentId(params.salt);
-    console.log(`Predicted intent ID: ${intentId}`);
 
     // Encode the receiver as bytes
     const receiverBytes = ethers.getBytes(
       ethers.zeroPadValue(params.receiver, 20)
     );
 
-    console.log(`Initiating transfer transaction...`);
+    console.log(`🚀 Initiating transfer transaction...`);
     // Execute the transaction
     const tx = await intentContract.initiateTransfer(
       params.asset,

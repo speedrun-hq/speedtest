@@ -46,7 +46,7 @@ export async function executeTransfer() {
   // Get private key from environment
   const privateKey = process.env.EVM_PRIVATE_KEY;
   if (!privateKey) {
-    console.error("Error: EVM_PRIVATE_KEY environment variable is required");
+    console.error("❌ Error: EVM_PRIVATE_KEY environment variable is required");
     process.exit(1);
   }
 
@@ -56,13 +56,15 @@ export async function executeTransfer() {
 
     // Validate chain options
     if (!chains[options.src]) {
-      console.error(`Error: Source chain '${options.src}' not supported`);
-      console.log(`Supported chains: ${Object.keys(chains).join(", ")}`);
+      console.error(`❌ Error: Source chain '${options.src}' not supported`);
+      console.log(`🔗 Supported chains: ${Object.keys(chains).join(", ")}`);
       process.exit(1);
     }
     if (!chains[options.dst]) {
-      console.error(`Error: Destination chain '${options.dst}' not supported`);
-      console.log(`Supported chains: ${Object.keys(chains).join(", ")}`);
+      console.error(
+        `❌ Error: Destination chain '${options.dst}' not supported`
+      );
+      console.log(`🔗 Supported chains: ${Object.keys(chains).join(", ")}`);
       process.exit(1);
     }
 
@@ -72,13 +74,13 @@ export async function executeTransfer() {
     // Validate asset is available on both chains
     if (!sourceConfig[assetName]) {
       console.error(
-        `Error: Asset '${assetName}' not available on ${sourceConfig.name}`
+        `❌ Error: Asset '${assetName}' not available on ${sourceConfig.name}`
       );
       process.exit(1);
     }
     if (!destConfig[assetName]) {
       console.error(
-        `Error: Asset '${assetName}' not available on ${destConfig.name}`
+        `❌ Error: Asset '${assetName}' not available on ${destConfig.name}`
       );
       process.exit(1);
     }
@@ -89,7 +91,7 @@ export async function executeTransfer() {
 
     // Initialize wallet address from private key
     const wallet = new ethers.Wallet(privateKey);
-    console.log(`Using wallet address: ${wallet.address}`);
+    console.log(`👛 Using wallet address: ${wallet.address}`);
 
     // Check wallet balances
     const sourceNativeBalance = await sourceClient.getBalance();
@@ -103,7 +105,7 @@ export async function executeTransfer() {
 
     // Initiate transfer from source to destination
     console.log(
-      `\nInitiating transfer from ${sourceConfig.name} to ${destConfig.name}...`
+      `\n🏃 Initiating transfer of ${options.amount} ${assetName.toUpperCase()} with ${options.fee} fee from ${sourceConfig.emoji} ${sourceConfig.name} to ${destConfig.emoji} ${destConfig.name}...`
     );
 
     // Parse amounts with the correct number of decimals (6 for USDC)
@@ -120,92 +122,118 @@ export async function executeTransfer() {
 
     const { intentId, txHash } =
       await sourceClient.initiateTransfer(transferParams);
-    console.log(`Intent created with ID: ${intentId}`);
-    console.log(`Intent initiated with transaction: ${txHash}`);
+    console.log(`📝 Intent created with ID: ${intentId}`);
+    console.log(`🔄 Intent initiated with transaction: ${txHash}`);
 
     // Poll the Speedrun API for intent status
-    console.log("\nPolling for intent status...");
-    const statusResult = await speedrunApi.pollIntentStatus(
-      intentId,
-      ["fulfilled", "settled"],
-      MAX_POLL_ATTEMPTS,
-      POLL_INTERVAL_MS
-    );
+    console.log("\n⏳ Polling Speedrun API for intent status...");
 
-    if (!statusResult.intent) {
-      console.error("Intent was not found after maximum polling attempts.");
+    try {
+      const statusResult = await speedrunApi.pollIntentStatus(
+        intentId,
+        ["fulfilled", "settled"],
+        MAX_POLL_ATTEMPTS,
+        POLL_INTERVAL_MS
+      );
+
+      if (!statusResult.intent) {
+        console.error(
+          "❌ Intent was not found after maximum polling attempts."
+        );
+        process.exit(1);
+      }
+
+      const finalIntent = statusResult.intent;
+      console.log(`\n📊 Final intent status: ${finalIntent.status}`);
+
+      if (finalIntent.status === "fulfilled") {
+        console.log(
+          "👌 Intent was fulfilled but not yet settled. The intent was processed successfully but settlement is still pending."
+        );
+
+        // Display timing information if available
+        if (statusResult.timeToFulfill) {
+          console.log(
+            `⏱️ Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
+          );
+        }
+
+        // Check final balances
+        const finalDestTokenBalance = await destClient.getTokenBalance(
+          destConfig[assetName]
+        );
+        console.log(
+          `\n💰 Final ${destConfig.emoji} ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
+        );
+
+        if (finalIntent.fulfillment_tx) {
+          console.log(
+            `🧾 Fulfillment transaction: ${finalIntent.fulfillment_tx}`
+          );
+        }
+      } else if (finalIntent.status === "settled") {
+        console.log(
+          "✅ Success! The intent was fulfilled and settled successfully."
+        );
+
+        // Display timing information if available
+        if (statusResult.timeToFulfill) {
+          console.log(
+            `⏱️ Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
+          );
+        }
+
+        if (statusResult.timeToSettle) {
+          console.log(
+            `⏱️ Time from fulfill to settle: ${formatDuration(statusResult.timeToSettle)}`
+          );
+          if (statusResult.totalTime) {
+            console.log(
+              `⏱️ Total time: ${formatDuration(statusResult.totalTime)}`
+            );
+          }
+        }
+
+        // Check final balances
+        const finalDestTokenBalance = await destClient.getTokenBalance(
+          destConfig[assetName]
+        );
+        console.log(
+          `\n💰 Final ${destConfig.emoji} ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
+        );
+
+        if (finalIntent.fulfillment_tx) {
+          console.log(
+            `🧾 Fulfillment transaction: ${finalIntent.fulfillment_tx}`
+          );
+        }
+
+        if (finalIntent.settlement_tx) {
+          console.log(
+            `🧾 Settlement transaction: ${finalIntent.settlement_tx}`
+          );
+        }
+      } else {
+        console.log(
+          `⚠️ The intent is still in ${finalIntent.status} state after maximum polling attempts.`
+        );
+      }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Intent not found in API")
+      ) {
+        console.error(`❌ ${error.message}`);
+        console.error(
+          "❌ The intent might not have been indexed yet or there could be an API issue."
+        );
+        process.exit(1);
+      }
+      console.error("❌ Error polling Speedrun API:", error);
       process.exit(1);
     }
-
-    const finalIntent = statusResult.intent;
-    console.log(`\nFinal intent status: ${finalIntent.status}`);
-
-    if (finalIntent.status === "fulfilled") {
-      console.log(
-        "Intent was fulfilled but not yet settled. The intent was processed successfully but settlement is still pending."
-      );
-
-      // Display timing information if available
-      if (statusResult.timeToFulfill) {
-        console.log(
-          `Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
-        );
-      }
-
-      // Check final balances
-      const finalDestTokenBalance = await destClient.getTokenBalance(
-        destConfig[assetName]
-      );
-      console.log(
-        `\nFinal ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
-      );
-
-      if (finalIntent.fulfillment_tx) {
-        console.log(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
-      }
-    } else if (finalIntent.status === "settled") {
-      console.log(
-        "Success! The intent was processed and settled successfully."
-      );
-
-      // Display timing information if available
-      if (statusResult.timeToFulfill) {
-        console.log(
-          `Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
-        );
-      }
-
-      if (statusResult.timeToSettle) {
-        console.log(
-          `Time from fulfill to settle: ${formatDuration(statusResult.timeToSettle)}`
-        );
-        if (statusResult.totalTime) {
-          console.log(`Total time: ${formatDuration(statusResult.totalTime)}`);
-        }
-      }
-
-      // Check final balances
-      const finalDestTokenBalance = await destClient.getTokenBalance(
-        destConfig[assetName]
-      );
-      console.log(
-        `\nFinal ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
-      );
-
-      if (finalIntent.fulfillment_tx) {
-        console.log(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
-      }
-
-      if (finalIntent.settlement_tx) {
-        console.log(`Settlement transaction: ${finalIntent.settlement_tx}`);
-      }
-    } else {
-      console.log(
-        `The intent is still in ${finalIntent.status} state after maximum polling attempts.`
-      );
-    }
   } catch (error) {
-    console.error("Error running the test:", error);
+    console.error("❌ Error running the test:", error);
     process.exit(1);
   }
 }
@@ -213,7 +241,7 @@ export async function executeTransfer() {
 // Only run if this file is executed directly
 if (require.main === module) {
   executeTransfer().catch((error) => {
-    console.error("Unhandled error:", error);
+    console.error("❌ Unhandled error:", error);
     process.exit(1);
   });
 }
