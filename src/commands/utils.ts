@@ -78,9 +78,7 @@ export async function handleIntentStatus(
         );
       }
     } else if (finalIntent.status === "settled") {
-      console.log(
-        "✅ Success! The intent was fulfilled and settled successfully."
-      );
+      console.log("✅ The intent was settled successfully.");
 
       // Display timing information if available
       if (statusResult.timeToFulfill) {
