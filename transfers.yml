@@ -1,0 +1,41 @@
+- src: arbitrum
+  dst: base
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"
+
+- src: arbitrum
+  dst: avalanche
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"
+
+- src: arbitrum
+  dst: bsc
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"
+
+- src: arbitrum
+  dst: ethereum
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"
+
+- src: arbitrum
+  dst: polygon
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"
+
+- src: arbitrum
+  dst: zetachain
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"
+
+- src: base
+  dst: arbitrum
+  asset: usdc
+  amount: "0.3"
+  fee: "0.2"

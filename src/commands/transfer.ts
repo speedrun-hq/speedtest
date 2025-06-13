@@ -84,7 +84,7 @@ export async function executeTransfer() {
       targetChain: destConfig.chainId, // Destination chain ID
       receiver: wallet.address, // Send to same wallet address
       tip: ethers.parseUnits(options.fee, tokenDecimals), // Fee/tip amount
-      salt: Math.floor(Math.random() * 1000), // Random salt
+      salt: BigInt(Math.floor(Math.random() * 1000)), // Random salt
     };
 
     const { intentId, txHash } =

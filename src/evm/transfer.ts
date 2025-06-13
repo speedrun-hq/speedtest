@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { TransferLogger } from "../utils/logger";
 
 // Intent contract interface for transfers
 const transferIntentAbi = [
@@ -12,16 +13,22 @@ export interface InitiateTransferParams {
   targetChain: number;
   receiver: string;
   tip: bigint;
-  salt: number;
+  salt: bigint;
 }
 
 export class TransferService {
   private wallet: ethers.Wallet;
   private intentContractAddress: string;
+  private logger?: TransferLogger;
 
-  constructor(wallet: ethers.Wallet, intentContractAddress: string) {
+  constructor(
+    wallet: ethers.Wallet,
+    intentContractAddress: string,
+    logger?: TransferLogger
+  ) {
     this.wallet = wallet;
     this.intentContractAddress = intentContractAddress;
+    this.logger = logger;
   }
 
   /**
@@ -33,7 +40,8 @@ export class TransferService {
     approveTokenCallback: (
       tokenAddress: string,
       amount: bigint
-    ) => Promise<ethers.TransactionReceipt>
+    ) => Promise<ethers.TransactionReceipt>,
+    nonce?: number
   ): Promise<{ intentId: string; txHash: string }> {
     // First approve the intent contract to spend tokens
     await approveTokenCallback(params.asset, params.amount + params.tip);
@@ -52,7 +60,7 @@ export class TransferService {
       ethers.zeroPadValue(params.receiver, 20)
     );
 
-    console.log(`🚀 Initiating transfer transaction...`);
+    this.logger?.info(`Initiating transfer transaction...`);
     // Execute the transaction
     const tx = await intentContract.initiateTransfer(
       params.asset,
@@ -60,7 +68,8 @@ export class TransferService {
       params.targetChain,
       receiverBytes,
       params.tip,
-      params.salt
+      params.salt,
+      { nonce }
     );
 
     // Wait for transaction to be mined

@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { TransferLogger } from "../utils/logger";
 
 // Initiator contract interface
 const initiatorAbi = [
@@ -22,9 +23,11 @@ export interface InitiateCallParams {
 
 export class CallService {
   private wallet: ethers.Wallet;
+  private logger?: TransferLogger;
 
-  constructor(wallet: ethers.Wallet) {
+  constructor(wallet: ethers.Wallet, logger?: TransferLogger) {
     this.wallet = wallet;
+    this.logger = logger;
   }
 
   /**
@@ -50,7 +53,7 @@ export class CallService {
     // Get the intent ID before initiating the call
     const intentId = await initiatorContract.getNextIntentId(params.salt);
 
-    console.log(`🚀 Initiating call transaction...`);
+    this.logger?.info(`Initiating call transaction...`);
     // Execute the transaction
     const tx = await initiatorContract.initiateAerodromeSwap(
       params.asset,

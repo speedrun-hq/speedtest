@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { ChainConfig } from "../constants";
 import { TransferService, InitiateTransferParams } from "./transfer";
 import { CallService, InitiateCallParams } from "./call";
+import { TransferLogger } from "../utils/logger";
 
 // ERC20 token interface
 const erc20Abi = [
@@ -20,13 +21,23 @@ export class EvmClient {
   private chainConfig: ChainConfig;
   private transferService: TransferService;
   private callService: CallService;
+  private logger?: TransferLogger;
 
-  constructor(chainConfig: ChainConfig, privateKey: string) {
+  constructor(
+    chainConfig: ChainConfig,
+    privateKey: string,
+    logger?: TransferLogger
+  ) {
     this.provider = new ethers.JsonRpcProvider(chainConfig.rpc);
     this.wallet = new ethers.Wallet(privateKey, this.provider);
     this.chainConfig = chainConfig;
-    this.transferService = new TransferService(this.wallet, chainConfig.intent);
-    this.callService = new CallService(this.wallet);
+    this.transferService = new TransferService(
+      this.wallet,
+      chainConfig.intent,
+      logger
+    );
+    this.callService = new CallService(this.wallet, logger);
+    this.logger = logger;
   }
 
   async getBalance(address?: string): Promise<string> {
@@ -80,18 +91,18 @@ export class EvmClient {
 
     // If allowance is already sufficient, return early
     if (currentAllowance >= amount) {
-      console.log(
-        `✅ Approval already exists for ${ethers.formatUnits(currentAllowance)} tokens`
+      this.logger?.success(
+        `Approval already exists for ${ethers.formatUnits(currentAllowance)} tokens`
       );
       // Return a dummy receipt since we don't need to make a transaction
       return {} as ethers.TransactionReceipt;
     }
 
-    console.log(`🔓 Approving ${spenderAddress} to spend tokens...`);
+    this.logger?.info(`Approving ${spenderAddress} to spend tokens...`);
     const tx = await tokenContract.approve(spenderAddress, amount);
     const receipt = await tx.wait();
 
-    console.log(`✅ Approval transaction confirmed: ${receipt?.hash}`);
+    this.logger?.success(`Approval transaction confirmed: ${receipt?.hash}`);
     return receipt;
   }
 
@@ -100,11 +111,13 @@ export class EvmClient {
    * @returns Object containing the intentId and transaction hash
    */
   async initiateTransfer(
-    params: InitiateTransferParams
+    params: InitiateTransferParams,
+    nonce?: number
   ): Promise<{ intentId: string; txHash: string }> {
     return this.transferService.initiateTransfer(
       params,
-      (tokenAddress, amount) => this.approveToken(tokenAddress, amount)
+      (tokenAddress, amount) => this.approveToken(tokenAddress, amount),
+      nonce
     );
   }
 
@@ -122,5 +135,9 @@ export class EvmClient {
 
   async checkFunds(address: string, tokenAddress: string): Promise<string> {
     return this.getTokenBalance(tokenAddress, address);
+  }
+
+  async getTransactionCount(): Promise<number> {
+    return this.provider.getTransactionCount(this.wallet.address);
   }
 }

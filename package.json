@@ -10,6 +10,7 @@
     "bytecodes": "ts-node src/commands/bytecodes.ts",
     "verified": "ts-node src/commands/verified.ts",
     "transfer": "ts-node src/commands/transfer.ts",
+    "transfers": "ts-node src/commands/transfers.ts",
     "call": "ts-node src/commands/call.ts",
     "cli": "ts-node src/index.ts"
   },
@@ -31,6 +32,7 @@
     "ethers": "^6.14.3"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.24",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",

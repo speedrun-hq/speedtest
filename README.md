@@ -115,3 +115,19 @@ npm run verified
 ```
 
 This requires explorer API keys set in your `.env`.
+
+### Execute a serie of transfer
+
+Execute multiple cross-chain transfers concurrently using a YAML configuration file:
+
+```bash
+npm run transfers -- -f <path_to_yaml>
+```
+
+A sample test config file is provided in `transfers.yml`
+
+Example:
+
+```bash
+npm run transfers -- -f transfers.yml
+```

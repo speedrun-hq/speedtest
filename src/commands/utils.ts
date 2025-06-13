@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { SpeedrunApiClient } from "../speedrun/api";
 import { EvmClient } from "../evm/client";
 import { ChainConfig } from "../constants";
+import { TransferLogger } from "../utils/logger";
 
 /**
  * Format milliseconds to a readable duration string
@@ -27,15 +28,16 @@ export async function handleIntentStatus(
   assetAddress: string,
   assetName: string,
   maxAttempts: number,
-  pollInterval: number
+  pollInterval: number,
+  logger: TransferLogger
 ): Promise<void> {
   const speedrunApi = new SpeedrunApiClient();
 
-  console.log(`📝 Intent created with ID: ${intentId}`);
-  console.log(`🔄 Intent initiated with transaction: ${txHash}`);
+  logger.info(`Intent created with ID: ${intentId}`);
+  logger.info(`Intent initiated with transaction: ${txHash}`);
 
   // Poll the Speedrun API for intent status
-  console.log("\n⏳ Polling Speedrun API for intent status...");
+  logger.info("Polling Speedrun API for intent status...");
 
   try {
     const statusResult = await speedrunApi.pollIntentStatus(
@@ -46,55 +48,51 @@ export async function handleIntentStatus(
     );
 
     if (!statusResult.intent) {
-      console.error("❌ Intent was not found after maximum polling attempts.");
-      process.exit(1);
+      logger.error("Intent was not found after maximum polling attempts.");
+      return;
     }
 
     const finalIntent = statusResult.intent;
-    console.log(`\n📊 Final intent status: ${finalIntent.status}`);
+    logger.info(`Final intent status: ${finalIntent.status}`);
 
     if (finalIntent.status === "fulfilled") {
-      console.log(
-        "👌 Intent was fulfilled but not yet settled. The intent was processed successfully but settlement is still pending."
+      logger.success(
+        "Intent was fulfilled but not yet settled. The intent was processed successfully but settlement is still pending."
       );
 
       // Display timing information if available
       if (statusResult.timeToFulfill) {
-        console.log(
-          `⏱️ Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
+        logger.info(
+          `Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
         );
       }
 
       // Check final balances
       const finalDestTokenBalance =
         await destClient.getTokenBalance(assetAddress);
-      console.log(
-        `\n💰 Final ${destConfig.emoji} ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
+      logger.info(
+        `Final ${destConfig.emoji} ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
       );
 
       if (finalIntent.fulfillment_tx) {
-        console.log(
-          `🧾 Fulfillment transaction: ${finalIntent.fulfillment_tx}`
-        );
+        logger.info(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
       }
     } else if (finalIntent.status === "settled") {
-      console.log("✅ The intent was settled successfully.");
+      logger.success("The intent was settled successfully.");
 
       // Display timing information if available
       if (statusResult.timeToFulfill) {
-        console.log(
-          `⏱️ Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
+        logger.info(
+          `Time to fulfill: ${formatDuration(statusResult.timeToFulfill)}`
         );
       }
 
       if (statusResult.timeToSettle) {
-        console.log(
-          `⏱️ Time from fulfill to settle: ${formatDuration(statusResult.timeToSettle)}`
+        logger.info(
+          `Time from fulfill to settle: ${formatDuration(statusResult.timeToSettle)}`
         );
         if (statusResult.totalTime) {
-          console.log(
-            `⏱️ Total time: ${formatDuration(statusResult.totalTime)}`
-          );
+          logger.info(`Total time: ${formatDuration(statusResult.totalTime)}`);
         }
       }
 
@@ -102,23 +100,21 @@ export async function handleIntentStatus(
       if (assetAddress) {
         const finalDestTokenBalance =
           await destClient.getTokenBalance(assetAddress);
-        console.log(
-          `\n💰 Final ${destConfig.emoji} ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
+        logger.info(
+          `Final ${destConfig.emoji} ${destConfig.name} ${assetName.toUpperCase()} balance: ${finalDestTokenBalance}`
         );
       }
 
       if (finalIntent.fulfillment_tx) {
-        console.log(
-          `🧾 Fulfillment transaction: ${finalIntent.fulfillment_tx}`
-        );
+        logger.info(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
       }
 
       if (finalIntent.settlement_tx) {
-        console.log(`🧾 Settlement transaction: ${finalIntent.settlement_tx}`);
+        logger.info(`Settlement transaction: ${finalIntent.settlement_tx}`);
       }
     } else {
-      console.log(
-        `⚠️ The intent is still in ${finalIntent.status} state after maximum polling attempts.`
+      logger.warning(
+        `The intent is still in ${finalIntent.status} state after maximum polling attempts.`
       );
     }
   } catch (error) {
@@ -126,14 +122,14 @@ export async function handleIntentStatus(
       error instanceof Error &&
       error.message.includes("Intent not found in API")
     ) {
-      console.error(`❌ ${error.message}`);
-      console.error(
-        "❌ The intent might not have been indexed yet or there could be an API issue."
+      logger.error(error.message);
+      logger.error(
+        "The intent might not have been indexed yet or there could be an API issue."
       );
-      process.exit(1);
+      return;
     }
-    console.error("❌ Error polling Speedrun API:", error);
-    process.exit(1);
+    logger.error(`Error polling Speedrun API: ${error}`);
+    return;
   }
 }
 
