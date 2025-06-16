@@ -68,8 +68,8 @@ export class TransferService {
       params.targetChain,
       receiverBytes,
       params.tip,
-      params.salt,
-      { nonce }
+      params.salt
+      // { nonce }
     );
 
     // Wait for transaction to be mined

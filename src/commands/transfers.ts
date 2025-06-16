@@ -27,25 +27,26 @@ interface TransferConfig {
   fee: string;
 }
 
-// Nonce manager to handle concurrent transactions on the same chain
-class NonceManager {
-  private nonces: Map<string, number> = new Map();
-  private locks: Map<string, Promise<void>> = new Map();
+// Lock manager to handle concurrent transactions on the same chain
+class LockManager {
+  private locks: Map<string, { promise: Promise<void>; resolve: () => void }> =
+    new Map();
 
   async acquireLock(chainId: string): Promise<void> {
     const lockKey = `lock_${chainId}`;
+
     // If there's no lock, create one
     if (!this.locks.has(lockKey)) {
-      let resolveLock: (value: void) => void;
-      const lock = new Promise<void>((resolve) => {
+      let resolveLock: () => void;
+      const promise = new Promise<void>((resolve) => {
         resolveLock = resolve;
       });
-      this.locks.set(lockKey, lock);
+      this.locks.set(lockKey, { promise, resolve: resolveLock! });
       return;
     }
 
     // If there is a lock, wait for it
-    await this.locks.get(lockKey);
+    await this.locks.get(lockKey)?.promise;
   }
 
   async releaseLock(chainId: string): Promise<void> {
@@ -53,27 +54,7 @@ class NonceManager {
     const lock = this.locks.get(lockKey);
     if (lock) {
       this.locks.delete(lockKey);
-      // Resolve the lock promise
-      (lock as any).resolve?.();
-    }
-  }
-
-  async getNextNonce(chainId: string, client: EvmClient): Promise<number> {
-    await this.acquireLock(chainId);
-    try {
-      // Always get the latest nonce from the network
-      const currentNonce = await client.getTransactionCount();
-
-      // If we have a stored nonce for this chain, use the higher of the two
-      const storedNonce = this.nonces.get(chainId) ?? 0;
-      const nonce = Math.max(currentNonce, storedNonce);
-
-      // Store the next nonce for this chain
-      this.nonces.set(chainId, nonce + 1);
-
-      return nonce;
-    } finally {
-      await this.releaseLock(chainId);
+      lock.resolve();
     }
   }
 }
@@ -81,7 +62,7 @@ class NonceManager {
 async function executeSingleTransfer(
   config: TransferConfig,
   index: number,
-  nonceManager: NonceManager
+  lockManager: LockManager
 ): Promise<void> {
   const logger = new TransferLogger(index);
   const privateKey = process.env.EVM_PRIVATE_KEY;
@@ -119,12 +100,6 @@ async function executeSingleTransfer(
     const wallet = new ethers.Wallet(privateKey);
     logger.info(`Using wallet address: ${wallet.address}`);
 
-    // Get next nonce for the source chain
-    const nonce = await nonceManager.getNextNonce(
-      sourceConfig.chainId.toString(),
-      sourceClient
-    );
-
     logger.info(
       `Initiating transfer of ${config.amount} ${config.asset.toUpperCase()} with ${config.fee} fee from ${sourceConfig.emoji} ${sourceConfig.name} to ${destConfig.emoji} ${destConfig.name}...`
     );
@@ -140,10 +115,18 @@ async function executeSingleTransfer(
       salt: BigInt(Math.floor(Math.random() * 1000)),
     };
 
-    const { intentId, txHash } = await sourceClient.initiateTransfer(
-      transferParams,
-      nonce
-    );
+    // Acquire lock before initiating transfer
+    await lockManager.acquireLock(sourceConfig.chainId.toString());
+    let intentId: string;
+    let txHash: string;
+    try {
+      const result = await sourceClient.initiateTransfer(transferParams);
+      intentId = result.intentId;
+      txHash = result.txHash;
+    } finally {
+      // Release lock after transfer is initiated
+      await lockManager.releaseLock(sourceConfig.chainId.toString());
+    }
 
     await handleIntentStatus(
       intentId,
@@ -187,12 +170,12 @@ export async function executeTransfers() {
 
     console.log(`🚀 Starting ${transfers.length} transfers...\n`);
 
-    const nonceManager = new NonceManager();
+    const lockManager = new LockManager();
 
     // Execute all transfers concurrently
     await Promise.all(
       transfers.map((config, index) =>
-        executeSingleTransfer(config, index, nonceManager)
+        executeSingleTransfer(config, index, lockManager)
       )
     );
 
