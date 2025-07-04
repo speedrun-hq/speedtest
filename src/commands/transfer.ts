@@ -8,7 +8,8 @@ import {
   POLL_INTERVAL_MS,
   MAX_POLL_ATTEMPTS,
 } from "../constants";
-import { handleIntentStatus, validateChains } from "./utils";
+import { handleIntentStatus, validateChains, getTokenDecimals } from "./utils";
+import { TransferLogger } from "../utils/logger";
 
 // Load environment variables
 dotenv.config();
@@ -76,7 +77,7 @@ export async function executeTransfer() {
     );
 
     // Parse amounts with the correct number of decimals (6 for USDC)
-    const tokenDecimals = assetName === "usdc" ? 6 : 18; // Default to 18 for other tokens
+    const tokenDecimals = getTokenDecimals(sourceConfig.chainId, assetName);
 
     const transferParams: InitiateTransferParams = {
       asset: sourceConfig[assetName], // Token address on source chain
@@ -90,6 +91,9 @@ export async function executeTransfer() {
     const { intentId, txHash } =
       await sourceClient.initiateTransfer(transferParams);
 
+    // Create a logger for this transfer
+    const logger = new TransferLogger(0);
+
     // Handle intent status polling and result display
     await handleIntentStatus(
       intentId,
@@ -99,7 +103,8 @@ export async function executeTransfer() {
       destConfig[assetName],
       assetName,
       MAX_POLL_ATTEMPTS,
-      POLL_INTERVAL_MS
+      POLL_INTERVAL_MS,
+      logger
     );
   } catch (error) {
     console.error("❌ Error running the test:", error);

@@ -10,7 +10,7 @@ import {
   POLL_INTERVAL_MS,
   MAX_POLL_ATTEMPTS,
 } from "../constants";
-import { handleIntentStatus, validateChains } from "./utils";
+import { handleIntentStatus, validateChains, getTokenDecimals } from "./utils";
 import { TransferLogger } from "../utils/logger";
 
 // Load environment variables
@@ -104,7 +104,7 @@ async function executeSingleTransfer(
       `Initiating transfer of ${config.amount} ${config.asset.toUpperCase()} with ${config.fee} fee from ${sourceConfig.emoji} ${sourceConfig.name} to ${destConfig.emoji} ${destConfig.name}...`
     );
 
-    const tokenDecimals = config.asset === "usdc" ? 6 : 18;
+    const tokenDecimals = getTokenDecimals(sourceConfig.chainId, config.asset);
 
     const transferParams: InitiateTransferParams = {
       asset: sourceConfig[config.asset]!,

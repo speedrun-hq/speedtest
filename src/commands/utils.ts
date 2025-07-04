@@ -134,6 +134,19 @@ export async function handleIntentStatus(
 }
 
 /**
+ * Get token decimals based on chain ID and token name
+ * BSC (chainId 56) uses 18 decimals for both USDC and USDT
+ * Other chains use 6 decimals for USDC and USDT
+ */
+export function getTokenDecimals(chainId: number, assetName: string): number {
+  if (chainId === 56) {
+    // BSC
+    return 18; // Both USDC and USDT use 18 decimals on BSC
+  }
+  return 6; // Default to 6 decimals for other chains
+}
+
+/**
  * Validate source and destination chains
  */
 export function validateChains(
