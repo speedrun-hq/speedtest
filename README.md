@@ -1,3 +1,5 @@
+<img src="logo.png" alt="Logo" style="display: block; margin: 0 auto; width: 200px;">
+
 # Speedtest
 
 A tool to perform E2E tests on Speedrun exchange network, including cross-chain transfers and calls.
