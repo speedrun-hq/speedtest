@@ -15,6 +15,10 @@ export interface ChainConfig {
   usdt?: string; // Optional as not all chains may have USDT
   emoji: string; // Emoji for the network
   explorer?: string; // Explorer API URL
+  gasToken: {
+    name: string; // e.g., "ETH", "MATIC", "BNB"
+    decimals: number; // Usually 18 for most chains
+  };
 }
 
 export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
@@ -27,6 +31,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       emoji: "🔵",
       explorer: "https://api.basescan.org",
+      gasToken: {
+        name: "ETH",
+        decimals: 18,
+      },
     },
     arbitrum: {
       name: "Arbitrum",
@@ -37,6 +45,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdt: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", // USDT on Arbitrum
       emoji: "🪐",
       explorer: "https://api.arbiscan.io",
+      gasToken: {
+        name: "ETH",
+        decimals: 18,
+      },
     },
     avalanche: {
       name: "Avalanche",
@@ -48,6 +60,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       emoji: "🔺",
       explorer:
         "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan",
+      gasToken: {
+        name: "AVAX",
+        decimals: 18,
+      },
     },
     bsc: {
       name: "BSC",
@@ -58,6 +74,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdt: "0x55d398326f99059fF775485246999027B3197955",
       emoji: "🟡",
       explorer: "https://api.bscscan.com",
+      gasToken: {
+        name: "BNB",
+        decimals: 18,
+      },
     },
     ethereum: {
       name: "Ethereum",
@@ -68,6 +88,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
       emoji: "👽",
       explorer: "https://api.etherscan.io",
+      gasToken: {
+        name: "ETH",
+        decimals: 18,
+      },
     },
     polygon: {
       name: "Polygon",
@@ -78,6 +102,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
       emoji: "🟣",
       explorer: "https://api.polygonscan.com",
+      gasToken: {
+        name: "POL",
+        decimals: 18,
+      },
     },
     zetachain: {
       name: "ZetaChain",
@@ -88,6 +116,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdt: "0x7c8dDa80bbBE1254a7aACf3219EBe1481c6E01d7",
       emoji: "🟩",
       explorer: "https://zetachain.blockscout.com/api",
+      gasToken: {
+        name: "ZETA",
+        decimals: 18,
+      },
     },
   },
   [Network.TESTNET]: {
@@ -100,6 +132,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0x0000000000000000000000000000000000000000", // placeholder
       usdt: "0x0000000000000000000000000000000000000000", // placeholder
       emoji: "",
+      gasToken: {
+        name: "ETH",
+        decimals: 18,
+      },
     },
     arbitrum: {
       name: "Arbitrum Testnet",
@@ -109,6 +145,10 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       usdc: "0x0000000000000000000000000000000000000000", // placeholder
       usdt: "0x0000000000000000000000000000000000000000", // placeholder
       emoji: "",
+      gasToken: {
+        name: "ETH",
+        decimals: 18,
+      },
     },
   },
 };
@@ -132,3 +172,7 @@ export const INITIATOR_CONTRACTS: InitiatorMapping[] = [
     address: "0xbAFeFC473e886557A7Bc8a283EdF4Cf47a3E17f9",
   },
 ];
+
+// ZetaChain router contract for gas limit queries
+export const ZETACHAIN_ROUTER_CONTRACT =
+  "0xcd74f36bad8f842641e67ec390be092a243297d6";

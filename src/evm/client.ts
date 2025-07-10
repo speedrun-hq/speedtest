@@ -140,4 +140,11 @@ export class EvmClient {
   async getTransactionCount(): Promise<number> {
     return this.provider.getTransactionCount(this.wallet.address);
   }
+
+  /**
+   * Get the provider instance for external contract calls
+   */
+  getProvider(): ethers.JsonRpcProvider {
+    return this.provider;
+  }
 }
