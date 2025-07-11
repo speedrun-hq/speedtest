@@ -56,7 +56,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
       rpc: "https://avalanche-c-chain-rpc.publicnode.com",
       intent: "0x9a22A7d337aF1801BEEcDBE7f4f04BbD09F9E5bb",
       usdc: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
-      usdt: "0xde3a24028580884448a5397872046a019649b084",
+      usdt: "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
       emoji: "🔺",
       explorer:
         "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan",
