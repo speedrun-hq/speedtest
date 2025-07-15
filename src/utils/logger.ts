@@ -31,14 +31,14 @@ export class TransferLogger {
   }
 
   error(message: string): void {
-    console.error(this.format(chalk.red(message)));
+    console.error(this.format(message));
   }
 
   success(message: string): void {
-    console.log(this.format(chalk.green(message)));
+    console.log(this.format(message));
   }
 
   warning(message: string): void {
-    console.log(this.format(chalk.yellow(message)));
+    console.log(this.format(message));
   }
 }

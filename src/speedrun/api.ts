@@ -1,5 +1,6 @@
 import axios from "axios";
 import { SPEEDRUN_API_URL } from "../constants";
+import { TransferLogger } from "../utils/logger";
 
 export interface IntentResponse {
   id: string;
@@ -63,7 +64,8 @@ export class SpeedrunApiClient {
     intentId: string,
     targetStatus: IntentResponse["status"] | IntentResponse["status"][],
     maxAttempts: number,
-    intervalMs: number
+    intervalMs: number,
+    logger: TransferLogger
   ): Promise<IntentStatusResult> {
     const targetStatuses = Array.isArray(targetStatus)
       ? targetStatus
@@ -95,7 +97,7 @@ export class SpeedrunApiClient {
       } else {
         // Only log when we first find the intent or when status changes
         if (!intentFound) {
-          console.log(`⏳ Intent found in API with status: ${intent.status}`);
+          logger.info(`⏳ Intent found in API with status: ${intent.status}`);
           intentFound = true;
         }
 
@@ -106,7 +108,7 @@ export class SpeedrunApiClient {
           // Record and log fulfilled status
           if (intent.status === "fulfilled") {
             fulfilledAt = new Date();
-            console.log(`👌 Intent fulfilled!`);
+            logger.success(`👌 Intent fulfilled!`);
           }
 
           // Record settled status

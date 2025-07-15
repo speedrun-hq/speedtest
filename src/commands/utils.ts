@@ -44,7 +44,8 @@ export async function handleIntentStatus(
       intentId,
       ["fulfilled", "settled"],
       maxAttempts,
-      pollInterval
+      pollInterval,
+      logger
     );
 
     if (!statusResult.intent) {
