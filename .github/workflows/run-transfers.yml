@@ -1,0 +1,50 @@
+name: Run Transfers E2E Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run tests in"
+        required: false
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+jobs:
+  run-transfers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup environment variables
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
+
+      - name: Run transfers
+        run: npm run transfers -- -f e2e-tests.yml
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Upload logs (if needed)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transfer-logs
+          path: |
+            *.log
+            logs/
+          retention-days: 7
