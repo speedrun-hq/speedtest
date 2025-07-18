@@ -96,7 +96,7 @@ export const CHAINS: Record<Network, Record<string, ChainConfig>> = {
     polygon: {
       name: "Polygon",
       chainId: 137,
-      rpc: "https://polygon-rpc.com",
+      rpc: "https://polygon-mainnet.public.blastapi.io",
       intent: "0x4017717c550E4B6E61048D412a718D6A8078d264",
       usdc: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
       usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
