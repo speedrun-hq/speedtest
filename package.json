@@ -15,6 +15,7 @@
     "gas-limits": "ts-node src/commands/gas-limits.ts",
     "token-associations": "ts-node src/commands/token-associations.ts",
     "swap-algebra-intermediaries": "ts-node src/commands/swap-algebra-intermediaries.ts",
+    "swap-algebra-liquidity": "ts-node src/commands/swap-algebra-liquidity.ts",
     "cli": "ts-node src/index.ts"
   },
   "repository": {

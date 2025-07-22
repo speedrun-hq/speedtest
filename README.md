@@ -161,6 +161,23 @@ This command queries the ZetaChain SwapAlgebra contract to display:
 - Intermediary token addresses for USDC and USDT
 - These tokens act as bridge tokens in the swap process on ZetaChain
 
+### View SwapAlgebra pool liquidity
+
+To view the liquidity reserves in SwapAlgebra pools for USDC and USDT:
+
+```bash
+npm run swap-algebra-liquidity
+```
+
+This command queries the ZetaChain SwapAlgebra pools to display:
+
+- Pool addresses for token pairs
+- Token reserves with formatted amounts
+- USD values for each reserve
+- Total liquidity in USD
+
+The pools represent the liquidity available for swaps between ZRC20 tokens and their intermediary tokens.
+
 ### Execute a serie of transfer
 
 Execute multiple cross-chain transfers concurrently using a YAML configuration file:
