@@ -176,3 +176,7 @@ export const INITIATOR_CONTRACTS: InitiatorMapping[] = [
 // ZetaChain router contract for gas limit queries
 export const ZETACHAIN_ROUTER_CONTRACT =
   "0xcd74f36bad8f842641e67ec390be092a243297d6";
+
+// ZetaChain SwapAlgebra contract for intermediary token queries
+export const ZETACHAIN_SWAP_ALGEBRA_CONTRACT =
+  "0x5d71aa0a455b7a714faf6fdf87829f98cbfe5bae";

@@ -148,6 +148,19 @@ This command queries the ZetaChain router contract to display:
 
 The output shows a nicely formatted table with emojis and chain information for easy reading.
 
+### View SwapAlgebra intermediary tokens
+
+To view the intermediary tokens used by SwapAlgebra for USDC and USDT swaps:
+
+```bash
+npm run swap-algebra-intermediaries
+```
+
+This command queries the ZetaChain SwapAlgebra contract to display:
+
+- Intermediary token addresses for USDC and USDT
+- These tokens act as bridge tokens in the swap process on ZetaChain
+
 ### Execute a serie of transfer
 
 Execute multiple cross-chain transfers concurrently using a YAML configuration file:
