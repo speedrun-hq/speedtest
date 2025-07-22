@@ -118,6 +118,36 @@ npm run verified
 
 This requires explorer API keys set in your `.env`.
 
+### Check gas limits
+
+To check gas limits for cross-chain operations on different chains:
+
+```bash
+npm run gas-limits
+```
+
+This command queries the ZetaChain router contract to display:
+
+- Gas limits for each supported chain
+- Current gas prices (when available)
+- Estimated fees for cross-chain operations
+
+### View token associations
+
+To view all token associations for USDC and USDT across different chains:
+
+```bash
+npm run token-associations
+```
+
+This command queries the ZetaChain router contract to display:
+
+- Chain IDs and names for each token
+- Associated asset addresses on each chain
+- ZRC20 token addresses on ZetaChain
+
+The output shows a nicely formatted table with emojis and chain information for easy reading.
+
 ### Execute a serie of transfer
 
 Execute multiple cross-chain transfers concurrently using a YAML configuration file:

@@ -13,6 +13,7 @@
     "transfers": "ts-node src/commands/transfers.ts",
     "call": "ts-node src/commands/call.ts",
     "gas-limits": "ts-node src/commands/gas-limits.ts",
+    "token-associations": "ts-node src/commands/token-associations.ts",
     "cli": "ts-node src/index.ts"
   },
   "repository": {
