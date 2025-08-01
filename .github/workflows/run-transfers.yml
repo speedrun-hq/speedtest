@@ -44,15 +44,6 @@ jobs:
           echo "EVM_PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "TEST_ENVIRONMENT=${{ inputs.environment || 'production' }}" >> $GITHUB_ENV
 
-      - name: Validate environment
-        run: |
-          if [ -z "$PRIVATE_KEY" ]; then
-            echo "❌ PRIVATE_KEY secret is not set"
-            exit 1
-          fi
-          echo "✅ Environment validated"
-          echo "🔧 Running tests in: $TEST_ENVIRONMENT"
-
       - name: Run transfers
         id: transfers
         run: |
