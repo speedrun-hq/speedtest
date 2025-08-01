@@ -2,7 +2,7 @@ name: Run Transfers E2E Tests
 
 on:
   schedule:
-    # Run every day at 4pm UTC
+    # Run every day at 4pm UTC (5pm CET winter / 6pm CEST summer)
     - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
@@ -15,10 +15,16 @@ on:
           - production
           - staging
           - development
+      notify_slack:
+        description: "Send Slack notifications"
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   run-transfers:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -35,19 +41,95 @@ jobs:
 
       - name: Setup environment variables
         run: |
-          echo "EVM_PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "TEST_ENVIRONMENT=${{ inputs.environment || 'production' }}" >> $GITHUB_ENV
+
+      - name: Validate environment
+        run: |
+          if [ -z "$PRIVATE_KEY" ]; then
+            echo "❌ PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          echo "✅ Environment validated"
+          echo "🔧 Running tests in: $TEST_ENVIRONMENT"
 
       - name: Run transfers
-        run: npm run transfers -- -f e2e-tests.yml
-        env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        id: transfers
+        run: |
+          echo "🚀 Starting transfer tests..."
+          START_TIME=$(date +%s)
 
-      - name: Upload logs (if needed)
+          # Run the actual transfers - will exit with 0 on success, non-zero on failure
+          npm run transfers -- -f e2e-tests.yml --env $TEST_ENVIRONMENT
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=${DURATION}s" >> $GITHUB_OUTPUT
+          echo "✅ Transfer tests completed successfully in ${DURATION}s"
+
+      - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: transfer-logs
+          name: transfer-logs-${{ github.run_id }}
           path: |
             *.log
             logs/
           retention-days: 7
+
+      - name: Notify Slack on Success
+        if: success() && (inputs.notify_slack != false)
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"#alerts-speedrun\",
+              \"username\": \"Speedrun Tests\",
+              \"icon_emoji\": \":white_check_mark:\",
+              \"text\": \"✅ Speedrun Transfer Tests Completed Successfully!\",
+              \"attachments\": [{
+                \"color\": \"good\",
+                \"fields\": [
+                  {\"title\": \"Environment\", \"value\": \"${{ inputs.environment || 'production' }}\", \"short\": true},
+                  {\"title\": \"Duration\", \"value\": \"${{ steps.transfers.outputs.duration }}\", \"short\": true},
+                  {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                  {\"title\": \"View Logs\", \"value\": \"<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Click here>\", \"short\": true}
+                ]
+              }]
+            }" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on Failure
+        if: failure() && (inputs.notify_slack != false)
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"#alerts-speedrun\",
+              \"username\": \"Speedrun Tests\",
+              \"icon_emoji\": \":x:\",
+              \"text\": \"❌ Speedrun Transfer Tests Failed!\",
+              \"attachments\": [{
+                \"color\": \"danger\",
+                \"fields\": [
+                  {\"title\": \"Environment\", \"value\": \"${{ inputs.environment || 'production' }}\", \"short\": true},
+                  {\"title\": \"Duration\", \"value\": \"${{ steps.transfers.outputs.duration || 'unknown' }}\", \"short\": true},
+                  {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                  {\"title\": \"Debug\", \"value\": \"<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs & Artifacts>\", \"short\": true}
+                ]
+              }]
+            }" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 📊 Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Duration**: ${{ steps.transfers.outputs.duration }}" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **Result**: All tests passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Result**: Tests failed - check logs for details" >> $GITHUB_STEP_SUMMARY
+            echo "📁 [View Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)" >> $GITHUB_STEP_SUMMARY
+          fi
