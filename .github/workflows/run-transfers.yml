@@ -1,6 +1,9 @@
 name: Run Transfers E2E Tests
 
 on:
+  schedule:
+    # Run every day at 4pm UTC
+    - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
       environment:
