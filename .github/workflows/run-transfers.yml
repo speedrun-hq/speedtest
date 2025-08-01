@@ -41,7 +41,7 @@ jobs:
 
       - name: Setup environment variables
         run: |
-          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "EVM_PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "TEST_ENVIRONMENT=${{ inputs.environment || 'production' }}" >> $GITHUB_ENV
 
       - name: Validate environment
