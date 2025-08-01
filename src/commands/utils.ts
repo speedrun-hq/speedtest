@@ -50,7 +50,7 @@ export async function handleIntentStatus(
 
     if (!statusResult.intent) {
       logger.error("Intent was not found after maximum polling attempts.");
-      return;
+      throw new Error("Intent was not found after maximum polling attempts.");
     }
 
     const finalIntent = statusResult.intent;
@@ -117,6 +117,9 @@ export async function handleIntentStatus(
       logger.warning(
         `The intent is still in ${finalIntent.status} state after maximum polling attempts.`
       );
+      throw new Error(
+        `Intent is still in ${finalIntent.status} state after maximum polling attempts.`
+      );
     }
   } catch (error) {
     if (
@@ -127,10 +130,10 @@ export async function handleIntentStatus(
       logger.error(
         "The intent might not have been indexed yet or there could be an API issue."
       );
-      return;
+      throw error;
     }
     logger.error(`Error polling Speedrun API: ${error}`);
-    return;
+    throw error;
   }
 }
 

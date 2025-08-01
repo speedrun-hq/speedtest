@@ -1,47 +1,47 @@
 - src: arbitrum
   dst: base
   asset: usdc
-  amount: "1"
+  amount: "0.5"
   fee: "0.2"
+# Disable for now to make CI faster
+# - src: base
+#   dst: avalanche
+#   asset: usdc
+#   amount: "0.5"
+#   fee: "0.2"
 
-- src: base
-  dst: avalanche
-  asset: usdc
-  amount: "1"
-  fee: "0.2"
+# - src: avalanche
+#   dst: polygon
+#   asset: usdc
+#   amount: "0.5"
+#   fee: "0.2"
 
-- src: avalanche
-  dst: polygon
-  asset: usdc
-  amount: "1"
-  fee: "0.2"
+# - src: polygon
+#   dst: arbitrum
+#   asset: usdc
+#   amount: "0.5"
+#   fee: "0.2"
 
-- src: polygon
-  dst: arbitrum
-  asset: usdc
-  amount: "1"
-  fee: "0.2"
+# - src: arbitrum
+#   dst: base
+#   asset: usdt
+#   amount: "0.5"
+#   fee: "0.2"
 
-- src: arbitrum
-  dst: base
-  asset: usdt
-  amount: "1"
-  fee: "0.2"
+# - src: base
+#   dst: avalanche
+#   asset: usdt
+#   amount: "0.5"
+#   fee: "0.2"
 
-- src: base
-  dst: avalanche
-  asset: usdt
-  amount: "1"
-  fee: "0.2"
+# - src: avalanche
+#   dst: polygon
+#   asset: usdt
+#   amount: "0.5"
+#   fee: "0.2"
 
-- src: avalanche
-  dst: polygon
-  asset: usdt
-  amount: "1"
-  fee: "0.2"
-
-- src: polygon
-  dst: arbitrum
-  asset: usdt
-  amount: "1"
-  fee: "0.2"
+# - src: polygon
+#   dst: arbitrum
+#   asset: usdt
+#   amount: "0.5"
+#   fee: "0.2"

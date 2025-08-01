@@ -68,7 +68,7 @@ async function executeSingleTransfer(
   const privateKey = process.env.EVM_PRIVATE_KEY;
   if (!privateKey) {
     logger.error("EVM_PRIVATE_KEY environment variable is required");
-    return;
+    throw new Error("EVM_PRIVATE_KEY environment variable is required");
   }
 
   try {
@@ -84,13 +84,17 @@ async function executeSingleTransfer(
       logger.error(
         `Asset '${config.asset}' not available on ${sourceConfig.name}`
       );
-      return;
+      throw new Error(
+        `Asset '${config.asset}' not available on ${sourceConfig.name}`
+      );
     }
     if (!destConfig[config.asset]) {
       logger.error(
         `Asset '${config.asset}' not available on ${destConfig.name}`
       );
-      return;
+      throw new Error(
+        `Asset '${config.asset}' not available on ${destConfig.name}`
+      );
     }
 
     const sourceClient = new EvmClient(sourceConfig, privateKey, logger);
@@ -141,6 +145,7 @@ async function executeSingleTransfer(
     );
   } catch (error) {
     logger.error(`Error running transfer: ${error}`);
+    throw error; // Re-throw the error to ensure the command fails
   }
 }
 
@@ -173,13 +178,30 @@ export async function executeTransfers() {
     const lockManager = new LockManager();
 
     // Execute all transfers concurrently
-    await Promise.all(
+    const results = await Promise.allSettled(
       transfers.map((config, index) =>
         executeSingleTransfer(config, index, lockManager)
       )
     );
 
-    console.log("\n✨ All transfers completed!");
+    // Check if any transfers failed
+    const failedTransfers = results.filter(
+      (result) => result.status === "rejected"
+    );
+    const successfulTransfers = results.filter(
+      (result) => result.status === "fulfilled"
+    );
+
+    if (failedTransfers.length > 0) {
+      console.log(
+        `\n❌ ${failedTransfers.length} transfer(s) failed, ${successfulTransfers.length} transfer(s) succeeded.`
+      );
+      process.exit(1);
+    }
+
+    console.log(
+      `\n✨ All ${transfers.length} transfers completed successfully!`
+    );
   } catch (error) {
     console.error("❌ Error running transfers:", error);
     process.exit(1);
