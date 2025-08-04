@@ -15,11 +15,6 @@ on:
           - production
           - staging
           - development
-      notify_slack:
-        description: "Send Slack notifications"
-        required: false
-        default: true
-        type: boolean
 
 jobs:
   run-transfers:
@@ -69,7 +64,7 @@ jobs:
           retention-days: 7
 
       - name: Notify Slack on Success
-        if: success() && (inputs.notify_slack != false)
+        if: success()
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{
@@ -90,7 +85,7 @@ jobs:
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on Failure
-        if: failure() && (inputs.notify_slack != false)
+        if: failure()
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{
