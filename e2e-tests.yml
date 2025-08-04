@@ -1,5 +1,5 @@
-- src: arbitrum
-  dst: base
+- src: base
+  dst: arbitrum
   asset: usdc
   amount: "0.5"
   fee: "0.2"
