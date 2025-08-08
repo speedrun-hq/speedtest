@@ -1,20 +1,26 @@
 - src: base
-  dst: arbitrum
+  dst: zetachain
   asset: usdc
   amount: "0.5"
   fee: "0.2"
-# Disable for now to make CI faster
+
+- src: zetachain
+  dst: base
+  asset: usdc
+  amount: "0.5"
+  fee: "0.2"
+
 # - src: base
 #   dst: avalanche
 #   asset: usdc
 #   amount: "0.5"
 #   fee: "0.2"
 
-# - src: avalanche
-#   dst: polygon
-#   asset: usdc
-#   amount: "0.5"
-#   fee: "0.2"
+- src: avalanche
+  dst: polygon
+  asset: usdc
+  amount: "0.5"
+  fee: "0.2"
 
 # - src: polygon
 #   dst: arbitrum
