@@ -16,8 +16,8 @@
 #   amount: "0.5"
 #   fee: "0.2"
 
-- src: avalanche
-  dst: polygon
+- src: polygon
+  dst: avalanche
   asset: usdc
   amount: "0.5"
   fee: "0.2"
