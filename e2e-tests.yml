@@ -1,14 +1,14 @@
 - src: base
-  dst: arbitrum
-  asset: usdc
-  amount: "0.5"
-  fee: "0.2"
-
-- src: arbitrum
   dst: avalanche
   asset: usdc
   amount: "0.5"
   fee: "0.2"
+
+# - src: arbitrum
+#   dst: avalanche
+#   asset: usdc
+#   amount: "0.5"
+#   fee: "0.2"
 
 - src: avalanche
   dst: polygon
@@ -27,7 +27,6 @@
   asset: usdc
   amount: "0.5"
   fee: "0.2"
-
 # - src: base
 #   dst: avalanche
 #   asset: usdc

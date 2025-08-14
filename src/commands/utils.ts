@@ -30,7 +30,12 @@ export async function handleIntentStatus(
   maxAttempts: number,
   pollInterval: number,
   logger: TransferLogger
-): Promise<void> {
+): Promise<{
+  status: "settled" | "fulfilled" | "pending" | "failed";
+  message: string;
+  fulfillmentTx?: string;
+  settlementTx?: string;
+}> {
   const speedrunApi = new SpeedrunApiClient();
 
   logger.info(`Intent created with ID: ${intentId}`);
@@ -57,7 +62,7 @@ export async function handleIntentStatus(
     logger.info(`Final intent status: ${finalIntent.status}`);
 
     if (finalIntent.status === "fulfilled") {
-      logger.success(
+      logger.error(
         "Intent was fulfilled but not yet settled. The intent was processed successfully but settlement is still pending."
       );
 
@@ -78,6 +83,9 @@ export async function handleIntentStatus(
       if (finalIntent.fulfillment_tx) {
         logger.info(`Fulfillment transaction: ${finalIntent.fulfillment_tx}`);
       }
+
+      // Return fulfilled status but throw error to indicate failure
+      throw new Error("Intent fulfilled but not settled - transfer failed");
     } else if (finalIntent.status === "settled") {
       logger.success("The intent was settled successfully.");
 
@@ -113,6 +121,13 @@ export async function handleIntentStatus(
       if (finalIntent.settlement_tx) {
         logger.info(`Settlement transaction: ${finalIntent.settlement_tx}`);
       }
+
+      return {
+        status: "settled",
+        message: "The intent was settled successfully.",
+        fulfillmentTx: finalIntent.fulfillment_tx,
+        settlementTx: finalIntent.settlement_tx,
+      };
     } else {
       logger.warning(
         `The intent is still in ${finalIntent.status} state after maximum polling attempts.`
@@ -131,6 +146,17 @@ export async function handleIntentStatus(
         "The intent might not have been indexed yet or there could be an API issue."
       );
       throw error;
+    }
+    if (
+      error instanceof Error &&
+      error.message.includes("fulfilled but not settled")
+    ) {
+      return {
+        status: "fulfilled",
+        message: "Intent fulfilled but not settled - transfer failed",
+        fulfillmentTx: undefined,
+        settlementTx: undefined,
+      };
     }
     logger.error(`Error polling Speedrun API: ${error}`);
     throw error;

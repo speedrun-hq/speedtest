@@ -10,6 +10,7 @@ import {
   INITIATOR_CONTRACTS,
 } from "../constants";
 import { handleIntentStatus, validateChains } from "./utils";
+import { TransferLogger } from "../utils/logger";
 
 // Load environment variables
 dotenv.config();
@@ -104,8 +105,11 @@ export async function executeCall() {
 
     const { intentId, txHash } = await sourceClient.initiateCall(callParams);
 
+    // Create a logger for this call
+    const logger = new TransferLogger(0);
+
     // Handle intent status polling and result display
-    await handleIntentStatus(
+    const statusResult = await handleIntentStatus(
       intentId,
       txHash,
       destClient,
@@ -113,8 +117,15 @@ export async function executeCall() {
       destConfig.usdc,
       "usdc",
       MAX_POLL_ATTEMPTS,
-      POLL_INTERVAL_MS
+      POLL_INTERVAL_MS,
+      logger
     );
+
+    // Check if call was successful (only settled is considered success)
+    if (statusResult.status !== "settled") {
+      console.error(`❌ Call failed with status: ${statusResult.status}`);
+      process.exit(1);
+    }
   } catch (error) {
     console.error("❌ Error running the test:", error);
     process.exit(1);

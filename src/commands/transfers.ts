@@ -27,6 +27,19 @@ interface TransferConfig {
   fee: string;
 }
 
+interface TransferResult {
+  index: number;
+  sourceChain: string;
+  destChain: string;
+  asset: string;
+  amount: string;
+  status: "settled" | "fulfilled" | "pending" | "failed";
+  message: string;
+  fulfillmentTx?: string;
+  settlementTx?: string;
+  error?: string;
+}
+
 // Lock manager to handle concurrent transactions on the same chain
 class LockManager {
   private locks: Map<string, { promise: Promise<void>; resolve: () => void }> =
@@ -63,7 +76,7 @@ async function executeSingleTransfer(
   config: TransferConfig,
   index: number,
   lockManager: LockManager
-): Promise<void> {
+): Promise<TransferResult> {
   const logger = new TransferLogger(index);
   const privateKey = process.env.EVM_PRIVATE_KEY;
   if (!privateKey) {
@@ -132,7 +145,7 @@ async function executeSingleTransfer(
       await lockManager.releaseLock(sourceConfig.chainId.toString());
     }
 
-    await handleIntentStatus(
+    const statusResult = await handleIntentStatus(
       intentId,
       txHash,
       destClient,
@@ -143,9 +156,30 @@ async function executeSingleTransfer(
       POLL_INTERVAL_MS,
       logger
     );
+
+    return {
+      index,
+      sourceChain: sourceConfig.name,
+      destChain: destConfig.name,
+      asset: config.asset.toUpperCase(),
+      amount: config.amount,
+      status: statusResult.status,
+      message: statusResult.message,
+      fulfillmentTx: statusResult.fulfillmentTx,
+      settlementTx: statusResult.settlementTx,
+    };
   } catch (error) {
     logger.error(`Error running transfer: ${error}`);
-    throw error; // Re-throw the error to ensure the command fails
+    return {
+      index,
+      sourceChain: config.src,
+      destChain: config.dst,
+      asset: config.asset.toUpperCase(),
+      amount: config.amount,
+      status: "failed",
+      message: `Transfer failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -184,14 +218,90 @@ export async function executeTransfers() {
       )
     );
 
-    // Check if any transfers failed
-    const failedTransfers = results.filter(
-      (result) => result.status === "rejected"
-    );
-    const successfulTransfers = results.filter(
-      (result) => result.status === "fulfilled"
-    );
+    // Process results
+    const transferResults: TransferResult[] = [];
+    const failedTransfers: TransferResult[] = [];
+    const successfulTransfers: TransferResult[] = [];
 
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        const transferResult = result.value;
+        transferResults.push(transferResult);
+        if (transferResult.status === "settled") {
+          successfulTransfers.push(transferResult);
+        } else {
+          // Consider fulfilled and other non-settled statuses as failed
+          failedTransfers.push(transferResult);
+        }
+      } else if (result.status === "rejected") {
+        // Handle rejected promises
+        const errorResult: TransferResult = {
+          index,
+          sourceChain: transfers[index]?.src || "unknown",
+          destChain: transfers[index]?.dst || "unknown",
+          asset: transfers[index]?.asset.toUpperCase() || "UNKNOWN",
+          amount: transfers[index]?.amount || "0",
+          status: "failed",
+          message: `Transfer failed: ${result.reason}`,
+          error: result.reason,
+        };
+        transferResults.push(errorResult);
+        failedTransfers.push(errorResult);
+      }
+    });
+
+    // Sort results by index to maintain order
+    transferResults.sort((a, b) => a.index - b.index);
+
+    // Display summary table
+    console.log("\n" + "=".repeat(120));
+    console.log("TRANSFER SUMMARY");
+    console.log("=".repeat(120));
+
+    // Table header
+    console.log(
+      `${"#".padEnd(3)} ${"Source".padEnd(12)} ${"Dest".padEnd(12)} ${"Token".padEnd(6)} ${"Amount".padEnd(8)} ${"Status".padEnd(25)} ${"Details".padEnd(50)}`
+    );
+    console.log("-".repeat(120));
+
+    // Table rows
+    transferResults.forEach((result) => {
+      const statusDisplay = getStatusDisplay(result.status);
+      const details =
+        result.message.length > 48
+          ? result.message.substring(0, 45) + "..."
+          : result.message;
+
+      console.log(
+        `${result.index.toString().padEnd(3)} ${result.sourceChain.padEnd(12)} ${result.destChain.padEnd(12)} ${result.asset.padEnd(6)} ${result.amount.padEnd(8)} ${statusDisplay.padEnd(25)} ${details.padEnd(50)}`
+      );
+    });
+
+    // Summary statistics
+    console.log("\n" + "-".repeat(120));
+    console.log("SUMMARY STATISTICS");
+    console.log("-".repeat(120));
+
+    const settledCount = transferResults.filter(
+      (r) => r.status === "settled"
+    ).length;
+    const fulfilledCount = transferResults.filter(
+      (r) => r.status === "fulfilled"
+    ).length;
+    const failedCount = transferResults.filter(
+      (r) => r.status === "failed"
+    ).length;
+    const pendingCount = transferResults.filter(
+      (r) => r.status === "pending"
+    ).length;
+
+    console.log(`✅ Settled (Success):     ${settledCount}`);
+    console.log(`⚠️  Fulfilled (Failed):    ${fulfilledCount}`);
+    console.log(`❌ Failed:                ${failedCount}`);
+    console.log(`⏳ Pending:               ${pendingCount}`);
+    console.log(`📊 Total:                 ${transferResults.length}`);
+
+    // Check if any transfers failed
     if (failedTransfers.length > 0) {
       console.log(
         `\n❌ ${failedTransfers.length} transfer(s) failed, ${successfulTransfers.length} transfer(s) succeeded.`
@@ -205,6 +315,21 @@ export async function executeTransfers() {
   } catch (error) {
     console.error("❌ Error running transfers:", error);
     process.exit(1);
+  }
+}
+
+function getStatusDisplay(status: TransferResult["status"]): string {
+  switch (status) {
+    case "settled":
+      return "✅ Settled (Success)";
+    case "fulfilled":
+      return "⚠️  Fulfilled (Failed)";
+    case "failed":
+      return "❌ Failed";
+    case "pending":
+      return "⏳ Pending";
+    default:
+      return "❓ Unknown";
   }
 }
 

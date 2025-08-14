@@ -95,7 +95,7 @@ export async function executeTransfer() {
     const logger = new TransferLogger(0);
 
     // Handle intent status polling and result display
-    await handleIntentStatus(
+    const statusResult = await handleIntentStatus(
       intentId,
       txHash,
       destClient,
@@ -106,6 +106,12 @@ export async function executeTransfer() {
       POLL_INTERVAL_MS,
       logger
     );
+
+    // Check if transfer was successful (only settled is considered success)
+    if (statusResult.status !== "settled") {
+      console.error(`❌ Transfer failed with status: ${statusResult.status}`);
+      process.exit(1);
+    }
   } catch (error) {
     console.error("❌ Error running the test:", error);
     process.exit(1);
