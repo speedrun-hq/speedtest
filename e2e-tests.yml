@@ -16,11 +16,11 @@
   amount: "0.5"
   fee: "0.2"
 
-- src: polygon
-  dst: zetachain
-  asset: usdc
-  amount: "0.5"
-  fee: "0.2"
+# - src: polygon
+#   dst: zetachain
+#   asset: usdc
+#   amount: "0.5"
+#   fee: "0.2"
 
 - src: zetachain
   dst: base
