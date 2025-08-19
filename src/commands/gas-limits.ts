@@ -7,6 +7,7 @@ import {
   CURRENT_NETWORK,
   ZETACHAIN_ROUTER_CONTRACT,
 } from "../constants";
+import { priceCache, TOKEN_IDS } from "../utils/price-cache";
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +21,7 @@ interface GasLimitEntry {
   gasLimit: string;
   gasPrice?: string;
   estimatedFee?: string;
+  estimatedFeeUSD?: string;
   gasTokenName: string;
 }
 
@@ -69,6 +71,39 @@ export async function showGasLimits() {
     // Store gas limits
     const gasLimits: GasLimitEntry[] = [];
 
+    // Collect unique token names for price fetching
+    const uniqueTokenNames = new Set<string>();
+    for (const [chainName, chainConfig] of Object.entries(chainConfigs)) {
+      if (chainName !== "zetachain") {
+        uniqueTokenNames.add(chainConfig.gasToken.name);
+      }
+    }
+
+    // Fetch token prices from CoinGecko API
+    console.log("\nFetching token prices from CoinGecko API...");
+    const tokenIds = Array.from(uniqueTokenNames)
+      .map((tokenName) => TOKEN_IDS[tokenName])
+      .filter(Boolean);
+
+    let tokenPrices: Record<string, { usd: number }> = {};
+
+    if (tokenIds.length === 0) {
+      console.log("⚠️ No supported tokens found for price fetching");
+    } else {
+      console.log(
+        `Fetching prices for: ${Array.from(uniqueTokenNames).join(", ")}`
+      );
+      tokenPrices = await priceCache.getTokenPrices(tokenIds);
+
+      if (Object.keys(tokenPrices).length > 0) {
+        console.log("✅ Token prices fetched successfully");
+      } else {
+        console.log(
+          "⚠️ Could not fetch token prices, USD fees will not be displayed"
+        );
+      }
+    }
+
     // Query gas limits for all chains except ZetaChain
     for (const [chainName, chainConfig] of Object.entries(chainConfigs)) {
       // Skip ZetaChain itself
@@ -90,6 +125,7 @@ export async function showGasLimits() {
         const chainProvider = new ethers.JsonRpcProvider(chainConfig.rpc);
         let gasPrice: string | undefined;
         let estimatedFee: string | undefined;
+        let estimatedFeeUSD: string | undefined;
 
         try {
           // Get gas price from the chain
@@ -105,6 +141,19 @@ export async function showGasLimits() {
               feeWei,
               chainConfig.gasToken.decimals
             );
+
+            // Calculate USD fee if we have token price
+            const tokenId = TOKEN_IDS[chainConfig.gasToken.name];
+            if (
+              tokenId &&
+              tokenPrices[tokenId] &&
+              typeof tokenPrices[tokenId].usd === "number"
+            ) {
+              const tokenPriceUSD = tokenPrices[tokenId].usd;
+              const feeAmount = parseFloat(estimatedFee);
+              const feeUSD = feeAmount * tokenPriceUSD;
+              estimatedFeeUSD = feeUSD.toFixed(6);
+            }
           }
         } catch (gasPriceError) {
           console.log(
@@ -120,6 +169,7 @@ export async function showGasLimits() {
           gasLimit: gasLimit.toString(),
           gasPrice,
           estimatedFee,
+          estimatedFeeUSD,
           gasTokenName: chainConfig.gasToken.name,
         });
 
@@ -129,6 +179,9 @@ export async function showGasLimits() {
           console.log(
             `  ✅ Estimated fee: ${estimatedFee} ${chainConfig.gasToken.name}`
           );
+          if (estimatedFeeUSD) {
+            console.log(`  ✅ Estimated fee: $${estimatedFeeUSD} USD`);
+          }
         }
       } catch (error) {
         console.error(
@@ -154,9 +207,30 @@ export async function showGasLimits() {
         .map((config) => (config.emoji + " " + config.name).length)
     );
 
+    // Find the longest gas limit for alignment
+    const longestGasLimit = Math.max(
+      ...gasLimits
+        .filter((item) => item.gasLimit !== "Error")
+        .map((item) => item.gasLimit.length)
+    );
+
+    // Find the longest gas price for alignment
+    const longestGasPrice = Math.max(
+      ...gasLimits
+        .filter((item) => item.gasPrice)
+        .map((item) => item.gasPrice!.length)
+    );
+
+    // Find the longest fee string for alignment
+    const longestFee = Math.max(
+      ...gasLimits
+        .filter((item) => item.estimatedFee)
+        .map((item) => `${item.estimatedFee} ${item.gasTokenName}`.length)
+    );
+
     // Display gas limits in a formatted table
     console.log("\nGas Limits and Estimated Fees by Chain:");
-    console.log("-".repeat(80));
+    console.log("-".repeat(120));
     for (const item of gasLimits) {
       const label = `${item.emoji} ${item.name}`;
       const chainIdStr = `(ID: ${item.chainId})`;
@@ -166,16 +240,21 @@ export async function showGasLimits() {
           `  ${label.padEnd(longestNameLength)} ${chainIdStr.padEnd(12)}: Error fetching data`
         );
       } else {
-        const gasLimitStr = `Gas: ${item.gasLimit}`;
+        const gasLimitStr = `Gas: ${item.gasLimit}`.padEnd(longestGasLimit + 5);
         const gasPriceStr = item.gasPrice
-          ? ` | Price: ${item.gasPrice} gwei`
-          : "";
+          ? ` | Price: ${item.gasPrice} gwei`.padEnd(longestGasPrice + 15)
+          : " ".repeat(longestGasPrice + 15);
         const feeStr = item.estimatedFee
-          ? ` | Fee: ${item.estimatedFee} ${item.gasTokenName}`
+          ? ` | Fee: ${item.estimatedFee} ${item.gasTokenName}`.padEnd(
+              longestFee + 8
+            )
+          : " ".repeat(longestFee + 8);
+        const feeUSDStr = item.estimatedFeeUSD
+          ? ` | Fee: $${item.estimatedFeeUSD} USD`
           : "";
 
         console.log(
-          `  ${label.padEnd(longestNameLength)} ${chainIdStr.padEnd(12)}: ${gasLimitStr}${gasPriceStr}${feeStr}`
+          `  ${label.padEnd(longestNameLength)} ${chainIdStr.padEnd(12)}: ${gasLimitStr}${gasPriceStr}${feeStr}${feeUSDStr}`
         );
       }
     }
@@ -213,17 +292,18 @@ export async function showGasLimits() {
 
         // Group fees by token for better summary
         const feesByToken: Record<string, number[]> = {};
+        const feesUSDByToken: Record<string, number[]> = {};
         chainsWithGasPrice.forEach((item) => {
           if (!feesByToken[item.gasTokenName]) {
             feesByToken[item.gasTokenName] = [];
+            feesUSDByToken[item.gasTokenName] = [];
           }
           feesByToken[item.gasTokenName].push(parseFloat(item.estimatedFee!));
-        });
-
-        console.log("  Average fees by token:");
-        Object.entries(feesByToken).forEach(([token, fees]) => {
-          const avgFee = fees.reduce((sum, fee) => sum + fee, 0) / fees.length;
-          console.log(`    ${token}: ${avgFee.toFixed(6)}`);
+          if (item.estimatedFeeUSD) {
+            feesUSDByToken[item.gasTokenName].push(
+              parseFloat(item.estimatedFeeUSD)
+            );
+          }
         });
       }
     }

@@ -130,7 +130,10 @@ This command queries the ZetaChain router contract to display:
 
 - Gas limits for each supported chain
 - Current gas prices (when available)
-- Estimated fees for cross-chain operations
+- Estimated fees for cross-chain operations in both native tokens and USD
+- Token prices are fetched from CoinGecko API with caching to avoid rate limits
+
+The USD fee calculation helps you understand the real cost of cross-chain operations across different networks.
 
 ### View token associations
 
